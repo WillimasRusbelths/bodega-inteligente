@@ -9,7 +9,9 @@ description: "Task list template for feature implementation"
 
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
+**Tests**: Tests are REQUIRED for critical business rules, endpoints, primary user flows,
+multi-tenant isolation, regressions, and approved performance targets. Omit a test category only when
+the specification explicitly establishes that it does not apply.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -18,6 +20,7 @@ description: "Task list template for feature implementation"
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
+- Reference the requirement ID(s) implemented or validated in every task description
 
 ## Path Conventions
 
@@ -69,6 +72,9 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] T007 Create base models/entities that all stories depend on
 - [ ] T008 Configure error handling and logging infrastructure
 - [ ] T009 Setup environment configuration management
+- [ ] TXXX Enforce tenant context and membership authorization in backend access paths
+- [ ] TXXX Add immutable audit infrastructure and transaction boundaries for critical mutations
+- [ ] TXXX Configure separate development and test data sources with production safeguards
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -80,12 +86,14 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 1 (REQUIRED where constitutionally applicable) ⚠️
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
 - [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
 - [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] TXXX [P] [US1] Add cross-tenant denial tests for [requirements] in [exact test path]
+- [ ] TXXX [P] [US1] Add transaction rollback and audit evidence tests in [exact test path]
 
 ### Implementation for User Story 1
 
@@ -152,10 +160,13 @@ Examples of foundational tasks (adjust based on your project):
 **Purpose**: Improvements that affect multiple user stories
 
 - [ ] TXXX [P] Documentation updates in docs/
+- [ ] TXXX Update OpenAPI, data model, architecture decisions, and test evidence in [exact paths]
 - [ ] TXXX Code cleanup and refactoring
 - [ ] TXXX Performance optimization across all stories
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
 - [ ] TXXX Security hardening
+- [ ] TXXX Validate strict TypeScript and absence of unjustified any usage
+- [ ] TXXX Run complete regression suite and preserve evidence in [exact path]
 - [ ] TXXX Run quickstart.md validation
 
 ---
@@ -179,7 +190,7 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Within Each User Story
 
-- Tests (if included) MUST be written and FAIL before implementation
+- Required tests MUST be written and FAIL before implementation
 - Models before services
 - Services before endpoints
 - Core implementation before integration

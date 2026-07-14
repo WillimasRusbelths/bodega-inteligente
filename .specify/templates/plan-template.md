@@ -40,7 +40,23 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- **Specification and traceability**: Every requirement maps to a user story, acceptance criteria,
+  technical tasks, source changes, and automated tests.
+- **Multi-tenant isolation**: Every tenant-owned entity and protected operation has an explicit
+  tenant boundary; the backend validates membership and cross-tenant denial tests are planned.
+- **Decoupled architecture**: Web and mobile use the documented REST/OpenAPI backend contract and do
+  not access critical tables directly or duplicate authoritative business rules.
+- **Security and privacy**: Inputs, authentication, membership-based authorization, least privilege,
+  secrets handling, customer-data minimization, and environment separation are addressed.
+- **Data integrity**: Transaction boundaries, rollback behavior, concurrency/idempotency, FEFO lot
+  handling, immutable audit evidence, soft deletion, and versioned migrations are defined where
+  applicable.
+- **Quality gates**: Mandatory unit, integration, system, isolation, regression, and performance
+  tests are identified with approved tools; documentation and evidence work is planned.
+- **MVP discipline**: The design supports future growth without implementing subscriptions, plans,
+  payments, multiple branches, or other unapproved future capabilities.
+
+**Gate Result**: [PASS or FAIL with explicit violations and remediation]
 
 ## Project Structure
 

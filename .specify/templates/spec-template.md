@@ -93,6 +93,10 @@
 - **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
 - **FR-005**: System MUST [behavior, e.g., "log all security events"]
 
+Each requirement MUST identify the user story and acceptance scenario it supports. Requirements
+that read or mutate tenant-owned data MUST state the tenant boundary and the expected result of a
+cross-tenant access attempt.
+
 *Example of marking unclear requirements:*
 
 - **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
@@ -100,8 +104,20 @@
 
 ### Key Entities *(include if feature involves data)*
 
-- **[Entity 1]**: [What it represents, key attributes without implementation]
+- **[Entity 1]**: [What it represents, tenant ownership, lifecycle, and key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
+
+### Constitutional Requirements *(mandatory)*
+
+- **Tenant Isolation**: [Tenant context, membership validation, and cross-tenant denial behavior]
+- **Roles and Authorization**: [Roles per bodega and least-privilege rules]
+- **Transactions and Concurrency**: [Atomic operations, rollback, idempotency, and conflict behavior]
+- **Audit and Historical Record**: [Audited events, required fields, soft deletion, and retention]
+- **Security and Privacy**: [Validation, sensitive/customer data, visibility, and authorized purpose]
+- **Lot and FEFO Rules**: [Lot/expiry behavior, or explicit reason this feature does not affect it]
+- **Human Confirmation**: [OCR confirmation behavior, or explicit reason OCR is not involved]
+- **Environment Boundaries**: [Permitted environments and prohibition on production test data]
+- **Out of Scope**: [Explicit exclusions, including future MVP capabilities not approved here]
 
 ## Success Criteria *(mandatory)*
 
