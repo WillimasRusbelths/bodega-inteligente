@@ -40,9 +40,9 @@ estricto; móvil y web consumen únicamente la API REST, y Prisma es la vía ord
 
 **Propósito**: materializar el modelo lógico y sus invariantes mediante Prisma y PostgreSQL.
 
-- [ ] T016 [P] Escribir pruebas de esquema para unicidad global de teléfono, unicidad `(tenantId,userId)` y coherencia de estados User/Tenant/Membership — FR-001, FR-002, FR-011, FR-012 — `apps/api/test/persistence/identity-schema.spec.ts`
-- [ ] T017 [P] Escribir pruebas de constraints MVP tenant-scoped para Membership/RBAC, perfil personal, Session MOBILE y relaciones compuestas A/B — FR-014, FR-018, FR-019, FR-020 — `apps/api/test/persistence/mvp-tenant-constraints.spec.ts`
-- [ ] T018 [P] Escribir pruebas MVP de ActivationChallenge/Alias, PIN, refresh e idempotencia, incluyendo hashes, TTL y consumo único — FR-005, FR-031, FR-035, FR-039 — `apps/api/test/persistence/mvp-auth-constraints.spec.ts`
+- [X] T016 [P] Escribir pruebas de esquema para unicidad global de teléfono, unicidad `(tenantId,userId)` y coherencia de estados User/Tenant/Membership — FR-001, FR-002, FR-011, FR-012 — `apps/api/test/persistence/identity-schema.spec.ts`
+- [X] T017 [P] Escribir pruebas de constraints MVP tenant-scoped para Membership/RBAC, perfil personal, Session MOBILE y relaciones compuestas A/B — FR-014, FR-018, FR-019, FR-020 — `apps/api/test/persistence/mvp-tenant-constraints.spec.ts`
+- [X] T018 [P] Escribir pruebas MVP de ActivationChallenge/Alias, PIN, refresh e idempotencia, incluyendo hashes, TTL y consumo único — FR-005, FR-031, FR-035, FR-039 — `apps/api/test/persistence/mvp-auth-constraints.spec.ts`
 - [ ] T019 Definir modelos Prisma `User`, `Tenant`, `Membership`, `Role`, `Permission`, `RolePermission` y `MembershipRole` con estados, versiones e índices aprobados — FR-001…FR-017 — `prisma/schema.prisma`
 - [ ] T020 Definir modelos Prisma MVP `ActivationChallenge`, `ActivationManualAlias`, Device PERSONAL, DeviceProfile personal/PIN, Session MOBILE y RefreshCredential sin secretos crudos — FR-005, FR-031, FR-034…FR-039 — `prisma/schema.prisma`
 - [ ] T021 Definir modelos Prisma MVP `AuditEvent` e `IdempotencyRecord`, preservando tenant e historia — FR-023…FR-026 — `prisma/schema.prisma`
