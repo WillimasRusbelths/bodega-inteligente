@@ -15,26 +15,26 @@ estricto; móvil y web consumen únicamente la API REST, y Prisma es la vía ord
 
 **Propósito**: establecer la estructura aprobada sin incorporar todavía lógica funcional.
 
-- [ ] T001 Crear workspaces conforme al plan — FR-028 — `package.json`, `pnpm-workspace.yaml`, `apps/api/package.json`, `apps/mobile/package.json`, `apps/web/package.json`, `packages/api-contract/package.json`, `packages/authz-catalog/package.json`, `packages/config/package.json`, `packages/test-fixtures/package.json`
-- [ ] T002 [P] Configurar TypeScript estricto compartido sin `any` injustificado — FR-028 — `packages/config/tsconfig.base.json`, `apps/api/tsconfig.json`, `apps/mobile/tsconfig.json`, `apps/web/tsconfig.json`, `packages/api-contract/tsconfig.json`, `packages/authz-catalog/tsconfig.json`, `packages/config/tsconfig.json`, `packages/test-fixtures/tsconfig.json`
-- [ ] T003 [P] Configurar lint y formato compartidos con reglas que prohíban imports de infraestructura entre clientes y API — FR-028 — `packages/config/eslint.config.js`, `packages/config/prettier.config.js`
-- [ ] T004 [P] Definir comandos raíz para lint, typecheck, unidades, integración, contrato, E2E móvil/web, seguridad y rendimiento — SC-001, SC-003 — `package.json`
-- [ ] T005 Documentar la frontera del monorepo y la prohibición de acceso móvil/web directo a PostgreSQL — FR-018, FR-019, FR-028 — `README.md`, `docs/architecture/module-boundaries.md`
+- [X] T001 Crear workspaces conforme al plan — FR-028 — `package.json`, `pnpm-workspace.yaml`, `apps/api/package.json`, `apps/mobile/package.json`, `apps/web/package.json`, `packages/api-contract/package.json`, `packages/authz-catalog/package.json`, `packages/config/package.json`, `packages/test-fixtures/package.json`
+- [X] T002 [P] Configurar TypeScript estricto compartido sin `any` injustificado — FR-028 — `packages/config/tsconfig.base.json`, `apps/api/tsconfig.json`, `apps/mobile/tsconfig.json`, `apps/web/tsconfig.json`, `packages/api-contract/tsconfig.json`, `packages/authz-catalog/tsconfig.json`, `packages/config/tsconfig.json`, `packages/test-fixtures/tsconfig.json`
+- [X] T003 [P] Configurar lint y formato compartidos con reglas que prohíban imports de infraestructura entre clientes y API — FR-028 — `packages/config/eslint.config.js`, `packages/config/prettier.config.js`
+- [X] T004 [P] Definir comandos raíz para lint, typecheck, unidades, integración, contrato, E2E móvil/web, seguridad y rendimiento — SC-001, SC-003 — `package.json`
+- [X] T005 Documentar la frontera del monorepo y la prohibición de acceso móvil/web directo a PostgreSQL — FR-018, FR-019, FR-028 — `README.md`, `docs/architecture/module-boundaries.md`
 
 ## Phase 2: Infraestructura común y configuración
 
 **Propósito**: preparar componentes compartidos que bloquean toda implementación funcional.
 
-- [ ] T006 Definir validación tipada y fail-fast de configuración por ambiente, incluyendo URLs, TTL, Argon2id y versiones de pepper sin valores reales — FR-005, FR-027, FR-034, FR-035 — `apps/api/src/config/env.schema.ts`, `apps/api/src/config/config.module.ts`
-- [ ] T007 [P] Escribir primero pruebas del guard de ambientes que rechacen producción en tests, mezcla de secretos/URLs, credenciales productivas en integración/E2E y configuración obligatoria ausente — SC-001, SC-002 — `apps/api/test/config/environment.guard.spec.ts`
-- [ ] T008 Implementar salvaguardas de ambientes separados y fallo seguro hasta satisfacer la prueba anterior — SC-001, SC-002 — `.env.example`, `apps/api/src/config/environment.guard.ts`
-- [ ] T009 [P] Escribir primero pruebas de configuración `phoneBindingHmac` para clave externa, versión actual, fail-fast, separación por ambiente y ausencia de clave en código, DB, logs o auditoría — FR-027, FR-031 — `apps/api/test/config/phone-binding.config.spec.ts`
-- [ ] T010 Implementar configuración tipada de clave HMAC externa y versión actual por ambiente, integrada al esquema fail-fast sin valores reales — FR-027, FR-031 — `apps/api/src/config/phone-binding.config.ts`, `apps/api/src/config/env.schema.ts`
-- [ ] T011 [P] Definir utilidades compartidas para UUID, UTC, E.164, paginación por cursor, `Idempotency-Key` y `If-Match` — FR-011, FR-022, FR-027 — `apps/api/src/common/validation/`, `apps/api/src/common/http/`
-- [ ] T012 [P] Definir catálogo de errores seguros y filtro global con `correlationId`, respuestas anti-enumeración y equivalencia entre recurso ajeno e inexistente — FR-020, FR-027, FR-029 — `apps/api/src/common/errors/error-catalog.ts`, `apps/api/src/common/errors/http-exception.filter.ts`
-- [ ] T013 [P] Escribir primero prueba fallida de redacción que impida PIN, código manual, secreto QR, approval/polling secrets, access/refresh tokens, pepper, clave HMAC, E.164 crudo y datos biométricos — FR-023, FR-024, FR-027, FR-031, FR-034 — `apps/api/test/security/log-redaction.spec.ts`
-- [ ] T014 Implementar redacción y logger estructurado hasta satisfacer la prueba anterior, sin registrar secretos ni identificadores crudos — FR-023, FR-024, FR-027, FR-031, FR-034 — `apps/api/src/common/logging/redaction.ts`, `apps/api/src/common/logging/logger.service.ts`
-- [ ] T015 [P] Crear fixtures sintéticos reutilizables para tenants A/B, propietarios, miembros, roles, dispositivos y relojes controlados — SC-001, SC-002, SC-005 — `packages/test-fixtures/src/`
+- [X] T006 Definir validación tipada y fail-fast de configuración por ambiente, incluyendo URLs, TTL, Argon2id y versiones de pepper sin valores reales — FR-005, FR-027, FR-034, FR-035 — `apps/api/src/config/env.schema.ts`, `apps/api/src/config/config.module.ts`
+- [X] T007 [P] Escribir primero pruebas del guard de ambientes que rechacen producción en tests, mezcla de secretos/URLs, credenciales productivas en integración/E2E y configuración obligatoria ausente — SC-001, SC-002 — `apps/api/test/config/environment.guard.spec.ts`
+- [X] T008 Implementar salvaguardas de ambientes separados y fallo seguro hasta satisfacer la prueba anterior — SC-001, SC-002 — `.env.example`, `apps/api/src/config/environment.guard.ts`
+- [X] T009 [P] Escribir primero pruebas de configuración `phoneBindingHmac` para clave externa, versión actual, fail-fast, separación por ambiente y ausencia de clave en código, DB, logs o auditoría — FR-027, FR-031 — `apps/api/test/config/phone-binding.config.spec.ts`
+- [X] T010 Implementar configuración tipada de clave HMAC externa y versión actual por ambiente, integrada al esquema fail-fast sin valores reales — FR-027, FR-031 — `apps/api/src/config/phone-binding.config.ts`, `apps/api/src/config/env.schema.ts`
+- [X] T011 [P] Definir utilidades compartidas para UUID, UTC, E.164, paginación por cursor, `Idempotency-Key` y `If-Match` — FR-011, FR-022, FR-027 — `apps/api/src/common/validation/`, `apps/api/src/common/http/`
+- [X] T012 [P] Definir catálogo de errores seguros y filtro global con `correlationId`, respuestas anti-enumeración y equivalencia entre recurso ajeno e inexistente — FR-020, FR-027, FR-029 — `apps/api/src/common/errors/error-catalog.ts`, `apps/api/src/common/errors/http-exception.filter.ts`
+- [X] T013 [P] Escribir primero prueba fallida de redacción que impida PIN, código manual, secreto QR, approval/polling secrets, access/refresh tokens, pepper, clave HMAC, E.164 crudo y datos biométricos — FR-023, FR-024, FR-027, FR-031, FR-034 — `apps/api/test/security/log-redaction.spec.ts`
+- [X] T014 Implementar redacción y logger estructurado hasta satisfacer la prueba anterior, sin registrar secretos ni identificadores crudos — FR-023, FR-024, FR-027, FR-031, FR-034 — `apps/api/src/common/logging/redaction.ts`, `apps/api/src/common/logging/logger.service.ts`
+- [X] T015 [P] Crear fixtures sintéticos reutilizables para tenants A/B, propietarios, miembros, roles, dispositivos y relojes controlados — SC-001, SC-002, SC-005 — `packages/test-fixtures/src/`
 
 ## Phase 3: Modelo de datos y persistencia
 
