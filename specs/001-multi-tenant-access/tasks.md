@@ -59,10 +59,10 @@ pertenencia; idempotencia repite el resultado y un fallo de auditoría revierte 
 - [X] T024 [P] [HU-001] Escribir pruebas contractuales de `createTenantWithFirstOwner`, resumen técnico y cambio de estado — FR-001…FR-004, FR-023 — `apps/api/test/contract/technical-tenants.contract.spec.ts`
 - [X] T025 [P] [HU-001] Escribir pruebas de integración para bootstrap atómico, rollback de auditoría, idempotencia y rechazo de actor no técnico — FR-001, FR-002, FR-023, SC-002 — `apps/api/test/integration/tenant-bootstrap.spec.ts`
 - [X] T026 [P] [HU-001] Escribir pruebas de privacidad del resumen técnico que excluyan ventas, clientes, costos e inventario — FR-004, SC-009 — `apps/api/test/security/technical-summary-privacy.spec.ts`
-- [ ] T027 [HU-001] Implementar repositorios de identidad global y tenant con operaciones transaccionales y lookup de teléfono E.164 — FR-001, FR-002 — `apps/api/src/modules/identity/repositories/user.repository.ts`, `apps/api/src/modules/tenants/repositories/tenant.repository.ts`
-- [ ] T028 [HU-001] Implementar servicio idempotente de bootstrap Tenant + primer owner + roles + AuditEvent como unidad indivisible — FR-001, FR-002, FR-023, SC-002 — `apps/api/src/modules/tenants/services/bootstrap-tenant.service.ts`
-- [ ] T029 [HU-001] Implementar autorización técnica mínima, consulta de resumen y activación/desactivación con motivo — FR-003, FR-004 — `apps/api/src/modules/tenants/services/technical-tenant.service.ts`, `apps/api/src/modules/tenants/guards/technical-admin.guard.ts`
-- [ ] T030 [HU-001] Exponer endpoints técnicos con DTOs OpenAPI, validación y errores seguros — FR-001…FR-004, FR-027 — `apps/api/src/modules/tenants/technical-tenants.controller.ts`, `apps/api/src/modules/tenants/dto/`
+- [X] T027 [HU-001] Implementar repositorios de identidad global y tenant con operaciones transaccionales y lookup de teléfono E.164 — FR-001, FR-002 — `apps/api/src/modules/identity/repositories/user.repository.ts`, `apps/api/src/modules/tenants/repositories/tenant.repository.ts`
+- [X] T028 [HU-001] Implementar servicio idempotente de bootstrap Tenant + primer owner + roles + AuditEvent como unidad indivisible — FR-001, FR-002, FR-023, SC-002 — `apps/api/src/modules/tenants/services/bootstrap-tenant.service.ts`
+- [X] T029 [HU-001] Implementar autorización técnica mínima, consulta de resumen y activación/desactivación con motivo — FR-003, FR-004 — `apps/api/src/modules/tenants/services/technical-tenant.service.ts`, `apps/api/src/modules/tenants/guards/technical-admin.guard.ts`
+- [X] T030 [HU-001] Exponer endpoints técnicos con DTOs OpenAPI, validación y errores seguros — FR-001…FR-004, FR-027 — `apps/api/src/modules/tenants/technical-tenants.controller.ts`, `apps/api/src/modules/tenants/dto/`
 
 ## Phase 5: Activación presencial mediante QR y código manual
 
