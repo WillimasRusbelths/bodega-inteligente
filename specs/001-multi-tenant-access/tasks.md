@@ -87,9 +87,9 @@ minutos, bloquean al quinto intento y nunca filtran valores crudos ni PII.
 **Historia principal**: HU-002 (P1). PIN y dispositivo personal pertenecen al **corte MVP**;
 biometría y dispositivo compartido son incremento posterior.
 
-- [ ] T041 [P] [HU-002] Escribir pruebas de PIN Argon2id con salt individual, pepper externo/versionado y ausencia de PIN crudo — FR-034, FR-036 — `apps/api/test/security/pin-hashing.spec.ts`
-- [ ] T042 [P] [HU-002] Escribir pruebas concurrentes del quinto fallo, bloqueo server-side de 15 minutos, reinicio tras éxito y reloj local irrelevante — FR-027, FR-036 — `apps/api/test/integration/pin-lockout.spec.ts`
-- [ ] T043 [P] [HU-002] Escribir pruebas de reglas para un perfil activo en dispositivo personal, revocación y recuperación presencial — FR-037…FR-039 — `apps/api/test/integration/personal-device.spec.ts`
+- [X] T041 [P] [HU-002] Escribir pruebas de PIN Argon2id con salt individual, pepper externo/versionado y ausencia de PIN crudo — FR-034, FR-036 — `apps/api/test/security/pin-hashing.spec.ts`
+- [X] T042 [P] [HU-002] Escribir pruebas concurrentes del quinto fallo, bloqueo server-side de 15 minutos, reinicio tras éxito y reloj local irrelevante — FR-027, FR-036 — `apps/api/test/integration/pin-lockout.spec.ts`
+- [X] T043 [P] [HU-002] Escribir pruebas de reglas para un perfil activo en dispositivo personal, revocación y recuperación presencial — FR-037…FR-039 — `apps/api/test/integration/personal-device.spec.ts`
 - [ ] T044 [HU-002] Implementar calibración/configuración Argon2id y servicio de setup/verificación de PIN con pepper fuera de DB — FR-034, FR-036 — `apps/api/src/modules/auth/services/pin.service.ts`, `apps/api/src/modules/auth/crypto/argon2.config.ts`
 - [ ] T045 [HU-002] Implementar registro, listado y revocación de Device/DeviceProfile con metadatos mínimos y cascada de sesiones — FR-037…FR-039 — `apps/api/src/modules/devices/services/device.service.ts`, `apps/api/src/modules/devices/devices.controller.ts`
 - [ ] T046 [P] [HU-002] Escribir prueba contractual de challenge/proof biométrico sin plantillas, con credencial de dispositivo y fallback explícito — FR-034, FR-038 — `apps/api/test/contract/biometric-auth.contract.spec.ts`
