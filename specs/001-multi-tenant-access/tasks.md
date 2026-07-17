@@ -128,13 +128,13 @@ biometría y dispositivo compartido son incremento posterior.
 
 **Historias principales**: HU-004, HU-005 y HU-006 (P1). **Corte MVP**.
 
-- [ ] T067 [P] [HU-005] Escribir pruebas unitarias del catálogo `owner_admin`, `seller`, `inventory_manager`, combinación por Membership y prohibición de permisos globales — FR-013, FR-014, FR-032 — `packages/authz-catalog/src/catalog.spec.ts`
-- [ ] T068 [P] [HU-005] Escribir pruebas contractuales de listar miembros, reemplazar roles y cambiar estado con `If-Match` — FR-015…FR-017, FR-022 — `apps/api/test/contract/membership-management.contract.spec.ts`
-- [ ] T069 [P] [HU-005] Escribir carrera serializable donde dos cambios intentan retirar al último owner y solo una operación permitida progresa — FR-022, FR-033, SC-008 — `apps/api/test/integration/last-owner-concurrency.spec.ts`
-- [ ] T070 [P] [HU-006] Escribir pruebas de desactivación/reactivación que preserven identidad, roles vigentes e historia sin restaurar sesiones/dispositivos — FR-012, FR-017, FR-021, FR-038, SC-010 — `apps/api/test/integration/membership-lifecycle.spec.ts`
-- [ ] T071 [HU-005] Implementar catálogo tipado y cálculo de permisos únicamente dentro de la Membership activa — FR-013, FR-014, FR-016, FR-032 — `packages/authz-catalog/src/index.ts`, `apps/api/src/modules/access/services/permission.service.ts`
-- [ ] T072 [HU-005] Implementar cambios de roles con versión optimista, `STALE_STATE` y protección serializable del último owner — FR-015, FR-016, FR-022, FR-033 — `apps/api/src/modules/memberships/services/change-roles.service.ts`
-- [ ] T073 [HU-006] Implementar desactivación/reactivación con motivo, actor, preservación histórica y revocación transaccional — FR-012, FR-017, FR-021, FR-038 — `apps/api/src/modules/memberships/services/change-membership-status.service.ts`, `apps/api/src/modules/memberships/memberships.controller.ts`
+- [X] T067 [P] [HU-005] Escribir pruebas unitarias del catálogo `owner_admin`, `seller`, `inventory_manager`, combinación por Membership y prohibición de permisos globales — FR-013, FR-014, FR-032 — `packages/authz-catalog/src/catalog.spec.ts`
+- [X] T068 [P] [HU-005] Escribir pruebas contractuales de listar miembros, reemplazar roles y cambiar estado con `If-Match` — FR-015…FR-017, FR-022 — `apps/api/test/contract/membership-management.contract.spec.ts`
+- [X] T069 [P] [HU-005] Escribir carrera serializable donde dos cambios intentan retirar al último owner y solo una operación permitida progresa — FR-022, FR-033, SC-008 — `apps/api/test/integration/last-owner-concurrency.spec.ts`
+- [X] T070 [P] [HU-006] Escribir pruebas de desactivación/reactivación que preserven identidad, roles vigentes e historia sin restaurar sesiones/dispositivos — FR-012, FR-017, FR-021, FR-038, SC-010 — `apps/api/test/integration/membership-lifecycle.spec.ts`
+- [X] T071 [HU-005] Implementar catálogo tipado y cálculo de permisos únicamente dentro de la Membership activa — FR-013, FR-014, FR-016, FR-032 — `packages/authz-catalog/src/index.ts`, `apps/api/src/modules/access/services/permission.service.ts`
+- [X] T072 [HU-005] Implementar cambios de roles con versión optimista, `STALE_STATE` y protección serializable del último owner — FR-015, FR-016, FR-022, FR-033 — `apps/api/src/modules/memberships/services/change-roles.service.ts`
+- [X] T073 [HU-006] Implementar desactivación/reactivación con motivo, actor, preservación histórica y revocación transaccional — FR-012, FR-017, FR-021, FR-038 — `apps/api/src/modules/memberships/services/change-membership-status.service.ts`, `apps/api/src/modules/memberships/memberships.controller.ts`
 
 ## Phase 10: Auditoría append-only
 
