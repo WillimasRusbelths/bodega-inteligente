@@ -140,12 +140,12 @@ biometría y dispositivo compartido son incremento posterior.
 
 **Historia principal**: HU-008 (P2), con infraestructura requerida por el **corte MVP**.
 
-- [ ] T074 [P] [HU-008] Escribir pruebas de inserción transaccional y rollback del cambio sensible cuando falla AuditEvent — FR-023…FR-025, SC-004 — `apps/api/test/integration/audit-transaction.spec.ts`
-- [ ] T075 [P] [HU-008] Escribir pruebas que nieguen UPDATE/DELETE al usuario DB de aplicación y conserven historia tras desactivación — FR-025, SC-010 — `apps/api/test/persistence/audit-append-only.spec.ts`
-- [ ] T076 [P] [HU-008] Escribir pruebas de consulta tenant-scoped y sanitización de before/after, teléfono y secretos — FR-024, FR-026, FR-027 — `apps/api/test/security/audit-privacy.spec.ts`
-- [ ] T077 [HU-008] Implementar `AuditService` append-only con actor real/efectivo, tenant, sesión/dispositivo, resultado, motivo y correlación sanitizados — FR-023, FR-024 — `apps/api/src/modules/audit/services/audit.service.ts`
-- [ ] T078 [HU-008] Integrar AuditEvent en las transacciones MVP de bootstrap, identidad, Membership, activación, PIN/dispositivo personal, sesiones, tenant activo, roles, estados y denegaciones A/B — FR-023…FR-025, SC-004 — `apps/api/src/modules/audit/audited-transaction.ts`, `apps/api/src/modules/audit/mvp-audit.integration.ts`
-- [ ] T079 [HU-008] Implementar consulta paginada de eventos limitada al tenant y permiso del owner — FR-025, FR-026, SC-010 — `apps/api/src/modules/audit/audit.controller.ts`, `apps/api/src/modules/audit/repositories/audit.repository.ts`
+- [X] T074 [P] [HU-008] Escribir pruebas de inserción transaccional y rollback del cambio sensible cuando falla AuditEvent — FR-023…FR-025, SC-004 — `apps/api/test/integration/audit-transaction.spec.ts`
+- [X] T075 [P] [HU-008] Escribir pruebas que nieguen UPDATE/DELETE al usuario DB de aplicación y conserven historia tras desactivación — FR-025, SC-010 — `apps/api/test/persistence/audit-append-only.spec.ts`
+- [X] T076 [P] [HU-008] Escribir pruebas de consulta tenant-scoped y sanitización de before/after, teléfono y secretos — FR-024, FR-026, FR-027 — `apps/api/test/security/audit-privacy.spec.ts`
+- [X] T077 [HU-008] Implementar `AuditService` append-only con actor real/efectivo, tenant, sesión/dispositivo, resultado, motivo y correlación sanitizados — FR-023, FR-024 — `apps/api/src/modules/audit/services/audit.service.ts`
+- [X] T078 [HU-008] Integrar AuditEvent en las transacciones MVP de bootstrap, identidad, Membership, activación, PIN/dispositivo personal, sesiones, tenant activo, roles, estados y denegaciones A/B — FR-023…FR-025, SC-004 — `apps/api/src/modules/audit/audited-transaction.ts`, `apps/api/src/modules/audit/mvp-audit.integration.ts`
+- [X] T079 [HU-008] Implementar consulta paginada de eventos limitada al tenant y permiso del owner — FR-025, FR-026, SC-010 — `apps/api/src/modules/audit/audit.controller.ts`, `apps/api/src/modules/audit/repositories/audit.repository.ts`
 
 ## Phase 11: Soporte técnico temporal
 
