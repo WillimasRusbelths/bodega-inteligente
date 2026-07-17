@@ -37,7 +37,7 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {
-    files: ["**/*.ts"],
+    files: ["**/*.{ts,tsx}"],
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
@@ -46,6 +46,12 @@ export default tseslint.config(
       "@typescript-eslint/consistent-type-imports": "error",
     },
   },
-  { files: ["apps/mobile/**/*.ts", "apps/web/**/*.ts"], rules: clientArchitectureRules },
-  { files: ["**/*.js"], extends: [tseslint.configs.disableTypeChecked] },
+  {
+    files: ["apps/mobile/**/*.{ts,tsx}", "apps/web/**/*.{ts,tsx}"],
+    rules: clientArchitectureRules,
+  },
+  {
+    files: ["**/*.{js,mjs,cjs}"],
+    extends: [tseslint.configs.disableTypeChecked],
+  },
 );
