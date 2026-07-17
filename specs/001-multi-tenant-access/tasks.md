@@ -106,10 +106,10 @@ biometría y dispositivo compartido son incremento posterior.
 - [X] T052 [P] [HU-002] Escribir pruebas contractuales de login PIN, refresh rotatorio y logout con expiración absoluta de 8 horas — FR-005, FR-035 — `apps/api/test/contract/session.contract.spec.ts`
 - [X] T053 [P] [HU-002] Escribir pruebas de reutilización de refresh que revoquen toda la familia y mantengan respuestas anti-enumeración — FR-005, FR-027, FR-029 — `apps/api/test/security/refresh-reuse.spec.ts`
 - [X] T054 [P] [HU-006] Escribir pruebas de revocación inmediata al desactivar User, Tenant, Membership o DeviceProfile aun con access token vigente — FR-006, FR-007, FR-021, FR-038, SC-003 — `apps/api/test/integration/immediate-revocation.spec.ts`
-- [ ] T055 [HU-002] Implementar Session server-side, access token de 10 minutos y RefreshCredential opaco almacenado como hash — FR-005, FR-035 — `apps/api/src/modules/auth/services/session.service.ts`, `apps/api/src/modules/auth/services/token.service.ts`
-- [ ] T056 [HU-002] Implementar rotación transaccional de refresh, detección de reuse y revocación de familia — FR-005, FR-023 — `apps/api/src/modules/auth/services/refresh-rotation.service.ts`
-- [ ] T057 [HU-002] Implementar guard de sesión que revalide authVersion y estados de cuenta, dispositivo, pertenencia y tenant en cada request — FR-006…FR-008, FR-018, FR-021 — `apps/api/src/modules/auth/guards/session.guard.ts`
-- [ ] T058 [HU-002] Exponer login PIN, refresh y logout con respuestas uniformes y tokens crudos solo en la respuesta inmediata autorizada — FR-005, FR-027, FR-034…FR-036 — `apps/api/src/modules/auth/auth.controller.ts`, `apps/api/src/modules/auth/dto/`
+- [X] T055 [HU-002] Implementar Session server-side, access token de 10 minutos y RefreshCredential opaco almacenado como hash — FR-005, FR-035 — `apps/api/src/modules/auth/services/session.service.ts`, `apps/api/src/modules/auth/services/token.service.ts`
+- [X] T056 [HU-002] Implementar rotación transaccional de refresh, detección de reuse y revocación de familia — FR-005, FR-023 — `apps/api/src/modules/auth/services/refresh-rotation.service.ts`
+- [X] T057 [HU-002] Implementar guard de sesión que revalide authVersion y estados de cuenta, dispositivo, pertenencia y tenant en cada request — FR-006…FR-008, FR-018, FR-021 — `apps/api/src/modules/auth/guards/session.guard.ts`
+- [X] T058 [HU-002] Exponer login PIN, refresh y logout con respuestas uniformes y tokens crudos solo en la respuesta inmediata autorizada — FR-005, FR-027, FR-034…FR-036 — `apps/api/src/modules/auth/auth.controller.ts`, `apps/api/src/modules/auth/dto/`
 
 ## Phase 8: Selección de tenant y autorización multi-tenant
 
