@@ -188,11 +188,11 @@ biometría y dispositivo compartido son incremento posterior.
 **Historias principales**: HU-002, HU-003, HU-004 y HU-006. El recorrido QR/manual + PIN + selección
 de tenant pertenece al **corte MVP**; biometría, compartidos y aprobación web son incrementales.
 
-- [ ] T106 Generar una sola vez el cliente TypeScript para operaciones MVP desde OpenAPI, validar responses one-time de activación/sesión y publicar el artefacto compartido — FR-005, FR-028, FR-031 — `packages/api-contract/src/generated/index.ts`, `packages/api-contract/src/generated/schema.snapshot.json`
-- [ ] T107 [HU-002] Implementar la capa HTTP móvil consumiendo el cliente OpenAPI ya generado, sin regenerarlo ni acceder a Supabase/PostgreSQL — FR-018, FR-019, FR-028 — `apps/mobile/src/api/client.ts`
-- [ ] T108 [HU-004] Implementar pantallas mobile-first para escanear QR o introducir código de 8 dígitos, mostrar expiración y configurar PIN — FR-027, FR-031, FR-034 — `apps/mobile/src/features/activation/`
-- [ ] T109 [HU-002] Implementar sesión móvil y credenciales de posesión en SecureStore, bloqueo local tras 30 minutos y cierre total — FR-005, FR-035, FR-037 — `apps/mobile/src/features/auth/`, `apps/mobile/src/security/secure-store.ts`
-- [ ] T110 [HU-003] Implementar selector de bodega y reemplazo visible del contexto/roles sin conservar permisos previos — FR-008…FR-010, SC-005 — `apps/mobile/src/features/tenant/`
+- [X] T106 Generar una sola vez el cliente TypeScript para operaciones MVP desde OpenAPI, validar responses one-time de activación/sesión y publicar el artefacto compartido — FR-005, FR-028, FR-031 — `packages/api-contract/src/generated/index.ts`, `packages/api-contract/src/generated/schema.snapshot.json`
+- [X] T107 [HU-002] Implementar la capa HTTP móvil consumiendo el cliente OpenAPI ya generado, sin regenerarlo ni acceder a Supabase/PostgreSQL — FR-018, FR-019, FR-028 — `apps/mobile/src/api/client.ts`
+- [X] T108 [HU-004] Implementar pantallas mobile-first para escanear QR o introducir código de 8 dígitos, mostrar expiración y configurar PIN — FR-027, FR-031, FR-034 — `apps/mobile/src/features/activation/`
+- [X] T109 [HU-002] Implementar sesión móvil y credenciales de posesión en SecureStore, bloqueo local tras 30 minutos y cierre total — FR-005, FR-035, FR-037 — `apps/mobile/src/features/auth/`, `apps/mobile/src/security/secure-store.ts`
+- [X] T110 [HU-003] Implementar selector de bodega y reemplazo visible del contexto/roles sin conservar permisos previos — FR-008…FR-010, SC-005 — `apps/mobile/src/features/tenant/`
 - [ ] T111 [P] [HU-002] Implementar biometría con LocalAuthentication que solo desbloquee credencial local y degrade explícitamente a PIN — FR-034, FR-038 — `apps/mobile/src/features/auth/biometric.ts`, `apps/mobile/src/features/auth/BiometricUnlockScreen.tsx`
 - [ ] T112 [HU-002] Implementar interfaz móvil de Device TENANT_SHARED administrado: selección de perfil, PIN/bloqueo independientes y revocación aislada — FR-034, FR-037 — `apps/mobile/src/features/devices/SharedDeviceProfileScreen.tsx`
 
@@ -201,10 +201,10 @@ de tenant pertenece al **corte MVP**; biometría, compartidos y aprobación web 
 **Historias principales**: HU-001…HU-008. Administración básica pertenece al **corte MVP**; login por
 pairing corresponde al incremento de Phase 12.
 
-- [ ] T113 [HU-001] Implementar la capa HTTP web consumiendo el cliente OpenAPI ya generado, sin regenerarlo ni acceder a Supabase/PostgreSQL — FR-018, FR-019, FR-028 — `apps/web/src/api/client.ts`
-- [ ] T114 [HU-004] Implementar administración tenant-scoped de miembros, alta pendiente y emisión presencial QR/manual con exposición única — FR-015, FR-027, FR-031 — `apps/web/src/features/memberships/`
-- [ ] T115 [HU-005] Implementar edición de roles y estados con ETag/If-Match, conflictos comprensibles y protección visible del último owner — FR-015…FR-017, FR-022, FR-033 — `apps/web/src/features/memberships/RoleEditor.tsx`, `apps/web/src/features/memberships/StatusEditor.tsx`
-- [ ] T116 [HU-008] Implementar consulta paginada de auditoría de acceso/membresía sin datos de otros tenants — FR-024…FR-026 — `apps/web/src/features/audit/`
+- [X] T113 [HU-001] Implementar la capa HTTP web consumiendo el cliente OpenAPI ya generado, sin regenerarlo ni acceder a Supabase/PostgreSQL — FR-018, FR-019, FR-028 — `apps/web/src/api/client.ts`
+- [X] T114 [HU-004] Implementar administración tenant-scoped de miembros, alta pendiente y emisión presencial QR/manual con exposición única — FR-015, FR-027, FR-031 — `apps/web/src/features/memberships/`
+- [X] T115 [HU-005] Implementar edición de roles y estados con ETag/If-Match, conflictos comprensibles y protección visible del último owner — FR-015…FR-017, FR-022, FR-033 — `apps/web/src/features/memberships/RoleEditor.tsx`, `apps/web/src/features/memberships/StatusEditor.tsx`
+- [X] T116 [HU-008] Implementar consulta paginada de auditoría de acceso/membresía sin datos de otros tenants — FR-024…FR-026 — `apps/web/src/features/audit/`
 - [ ] T117 [HU-002] Implementar pantalla de login por pairing que crea/presenta QR, hace polling y nunca solicita teléfono o PIN — FR-027, FR-030 — `apps/web/src/features/auth/WebPairingLogin.tsx`
 - [ ] T118 [HU-003] Implementar shell de sesión WEB con tenant/scopes visibles, expiración <=8 horas y cierre/revocación — FR-008…FR-010, FR-030 — `apps/web/src/features/auth/WebSessionProvider.tsx`, `apps/web/src/features/tenant/`
 

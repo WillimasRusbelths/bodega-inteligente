@@ -8,8 +8,8 @@
   },
   "scripts": {
     "lint": "eslint --config packages/config/eslint.config.js . --max-warnings=0",
-    "format": "prettier --write \"apps/**/*.{ts,json}\" \"packages/**/*.{ts,js,json}\" \"docs/architecture/**/*.md\" README.md package.json pnpm-workspace.yaml",
-    "format:check": "prettier --check \"apps/**/*.{ts,json}\" \"packages/**/*.{ts,js,json}\" \"docs/architecture/**/*.md\" README.md package.json pnpm-workspace.yaml",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,json}\" \"packages/**/*.{ts,tsx,js,mjs,json}\" \"docs/architecture/**/*.md\" README.md package.json pnpm-workspace.yaml",
+    "format:check": "prettier --check \"apps/**/*.{ts,tsx,json}\" \"packages/**/*.{ts,tsx,js,mjs,json}\" \"docs/architecture/**/*.md\" README.md package.json pnpm-workspace.yaml",
     "typecheck": "corepack pnpm -r typecheck",
     "test": "corepack pnpm test:config && corepack pnpm test:security",
     "test:unit": "vitest run apps/api/test/unit --passWithNoTests --pool=threads --maxWorkers=1",
