@@ -243,9 +243,9 @@ pairing corresponde al incremento de Phase 12.
 
 ## Phase 18: Automatización mediante GitHub Actions
 
-- [ ] T138 [P] Crear workflow de calidad para lint, formato y TypeScript estricto — FR-028 — `.github/workflows/quality.yml`
-- [ ] T139 [P] Crear workflow del gate MVP para unidades, integración PostgreSQL, contratos, concurrencia y usabilidad automatizable de tenants, activación, sesiones, RBAC, revocación y auditoría — FR-001…FR-029, FR-031…FR-039, SC-002, SC-003, SC-008 — `.github/workflows/mvp-api-tests.yml`
-- [ ] T140 [P] Crear workflow de seguridad que bloquee por suite A/B, ausencia de secretos y auditoría append-only — FR-018…FR-027, FR-029, SC-001, SC-004 — `.github/workflows/security-tests.yml`
+- [X] T138 [P] Crear workflow de calidad para lint, formato y TypeScript estricto — FR-028 — `.github/workflows/quality.yml`
+- [X] T139 [P] Crear workflow del gate MVP para unidades, integración PostgreSQL, contratos, concurrencia y usabilidad automatizable de tenants, activación, sesiones, RBAC, revocación y auditoría — FR-001…FR-029, FR-031…FR-039, SC-002, SC-003, SC-008 — `.github/workflows/mvp-api-tests.yml`
+- [X] T140 [P] Crear workflow de seguridad que bloquee por suite A/B, ausencia de secretos y auditoría append-only — FR-018…FR-027, FR-029, SC-001, SC-004 — `.github/workflows/security-tests.yml`
 - [ ] T141 [P] Crear workflow E2E del gate MVP para administración web y recorrido móvil QR/manual + PIN + tenant, sin pairing, biometría ni dispositivo compartido — FR-005…FR-010, FR-015…FR-017, FR-022…FR-027, FR-031, FR-034…FR-039 — `.github/workflows/mvp-e2e.yml`
 - [ ] T142 Crear workflow k6 programado/manual con artefactos de evidencia y umbrales del plan — SC-003 — `.github/workflows/performance.yml`
 
