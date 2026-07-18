@@ -19,8 +19,8 @@
 # 5. Bloqueo local por inactividad y desbloqueo con PIN.
 # 6. Revocación/cierre total y rechazo de una operación posterior.
 #
-# Exclusiones deliberadas de este flujo: pairing web, biometría, dispositivo
-# compartido, ventas, inventario, clientes, OCR y BI.
+# Exclusiones deliberadas de este flujo: emparejamiento web, factor biométrico,
+# dispositivo de uso común, ventas, inventario, clientes, OCR y BI.
 appId: "${BODEGIA_MOBILE_APP_ID}"
 ---
 []

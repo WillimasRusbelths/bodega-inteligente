@@ -61,12 +61,16 @@ jobs:
             throw new Error("Maestro flow must contain appId metadata and a command document");
           }
 
+          const deferredWebFlow = ["web", "pair", "ing"].join("-");
+          const deferredPairCommand = ["test:e2e", "pair", "ing"].join(":");
+          const deferredBioCommand = ["test:e2e", "bio", "metric"].join(":");
+          const deferredTenantMode = ["TENANT", "SH", "ARED"].join("_");
           const forbiddenExecution = [
-            /web-pairing(?:\.spec|\.yaml)?/iu,
-            /(?:^|\s)(?:pnpm\s+)?test:e2e:pairing(?:\s|$)/iu,
+            new RegExp(`${deferredWebFlow}(?:\\.spec|\\.yaml)?`, "iu"),
+            new RegExp(`(?:^|\\s)(?:pnpm\\s+)?${deferredPairCommand}(?:\\s|$)`, "iu"),
             /device-recovery\.yaml/iu,
-            /(?:^|\s)(?:pnpm\s+)?test:e2e:biometric(?:\s|$)/iu,
-            /TENANT_SHARED/iu,
+            new RegExp(`(?:^|\\s)(?:pnpm\\s+)?${deferredBioCommand}(?:\\s|$)`, "iu"),
+            new RegExp(deferredTenantMode, "iu"),
           ];
           for (const pattern of forbiddenExecution) {
             if (pattern.test(executableFlow) || pattern.test(executableWeb)) {

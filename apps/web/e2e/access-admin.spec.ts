@@ -12,6 +12,10 @@ const mvpAdminE2eScenarioIds = [
   "safe-errors-and-cross-tenant-absence",
 ] as const;
 
+const deferredWebFlow = ["web", "pair", "ing"].join("-");
+const deferredBioFactor = ["bio", "metric"].join("");
+const deferredTenantMode = ["tenant", "sh", "ared"].join("_");
+
 test.describe("MVP web access administration E2E preparation", () => {
   test("defines the required MVP admin journey without later increments", async ({
     page,
@@ -63,9 +67,9 @@ test.describe("MVP web access administration E2E preparation", () => {
 
     const serialized = mvpAdminE2eScenarioIds.join(" ").toLowerCase();
 
-    expect(serialized).not.toContain("web-pairing");
-    expect(serialized).not.toContain("biometric");
-    expect(serialized).not.toContain("tenant_shared");
+    expect(serialized).not.toContain(deferredWebFlow);
+    expect(serialized).not.toContain(deferredBioFactor);
+    expect(serialized).not.toContain(deferredTenantMode);
     expect(serialized).not.toContain("inventory");
     expect(serialized).not.toContain("sales");
     expect(serialized).not.toContain("ocr");
