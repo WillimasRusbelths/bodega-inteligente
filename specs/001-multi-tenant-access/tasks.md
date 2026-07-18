@@ -213,13 +213,13 @@ pairing corresponde al incremento de Phase 12.
 **Propósito**: consolidar reglas críticas y recorridos de API; completar estas pruebas forma parte del
 **corte MVP** para las capacidades prioritarias.
 
-- [ ] T119 [P] Completar únicamente unidades faltantes del gate MVP para estados de Membership, TTL de activación/PIN, catálogo RBAC, sanitización y errores seguros; esperar 100% de reglas críticas aprobadas — FR-005…FR-029, FR-031…FR-039 — `apps/api/test/unit/mvp-access-regression.spec.ts`
-- [ ] T120 [P] Validar transacciones MVP en PostgreSQL real para bootstrap, activación, revocación, roles y auditoría; esperar rollback total ante cada fallo inducido — FR-002, FR-012, FR-021…FR-025, FR-031, FR-033, FR-038, SC-002, SC-004 — `apps/api/test/integration/mvp-transaction-boundaries.spec.ts`
-- [ ] T121 [P] Comparar los operationId MVP implementados de tenants, members, activation, PIN, sessions, context, devices y audit contra OpenAPI; esperar cero divergencias — FR-001…FR-029, FR-031…FR-039 — `apps/api/test/contract/mvp-openapi-conformance.spec.ts`
-- [ ] T122 [P] Validar idempotencia MVP de bootstrap y emisión/consumo de activación; esperar una sola mutación y respuesta sanitizada repetible — FR-002, FR-022, FR-031 — `apps/api/test/integration/mvp-idempotency.spec.ts`
-- [ ] T123 [P] Validar concurrencia MVP de activación, refresh, PIN, roles y último propietario; esperar un ganador o conflicto seguro sin pérdida silenciosa — FR-022, FR-031, FR-033, FR-036, SC-008 — `apps/api/test/integration/mvp-concurrency.spec.ts`
-- [ ] T124 Validar desactivación/reactivación histórica y revocación inmediata en todos los guards MVP; esperar rechazo en la siguiente operación — FR-006, FR-007, FR-012, FR-017, FR-021, FR-038, SC-003, SC-010 — `apps/api/test/integration/mvp-revocation-regression.spec.ts`
-- [ ] T125 Consolidar evidencia TDD solo del gate MVP para bootstrap, activación, PIN, sesión, tenant, RBAC, revocación, auditoría y A/B; registrar fallo previo y éxito posterior — FR-001…FR-029, FR-031…FR-039, SC-001…SC-005, SC-008, SC-010 — `specs/001-multi-tenant-access/evidence/mvp-tdd-results.md`
+- [X] T119 [P] Completar únicamente unidades faltantes del gate MVP para estados de Membership, TTL de activación/PIN, catálogo RBAC, sanitización y errores seguros; esperar 100% de reglas críticas aprobadas — FR-005…FR-029, FR-031…FR-039 — `apps/api/test/unit/mvp-access-regression.spec.ts`
+- [X] T120 [P] Validar transacciones MVP en PostgreSQL real para bootstrap, activación, revocación, roles y auditoría; esperar rollback total ante cada fallo inducido — FR-002, FR-012, FR-021…FR-025, FR-031, FR-033, FR-038, SC-002, SC-004 — `apps/api/test/integration/mvp-transaction-boundaries.spec.ts`
+- [X] T121 [P] Comparar los operationId MVP implementados de tenants, members, activation, PIN, sessions, context, devices y audit contra OpenAPI; esperar cero divergencias — FR-001…FR-029, FR-031…FR-039 — `apps/api/test/contract/mvp-openapi-conformance.spec.ts`
+- [X] T122 [P] Validar idempotencia MVP de bootstrap y emisión/consumo de activación; esperar una sola mutación y respuesta sanitizada repetible — FR-002, FR-022, FR-031 — `apps/api/test/integration/mvp-idempotency.spec.ts`
+- [X] T123 [P] Validar concurrencia MVP de activación, refresh, PIN, roles y último propietario; esperar un ganador o conflicto seguro sin pérdida silenciosa — FR-022, FR-031, FR-033, FR-036, SC-008 — `apps/api/test/integration/mvp-concurrency.spec.ts`
+- [X] T124 Validar desactivación/reactivación histórica y revocación inmediata en todos los guards MVP; esperar rechazo en la siguiente operación — FR-006, FR-007, FR-012, FR-017, FR-021, FR-038, SC-003, SC-010 — `apps/api/test/integration/mvp-revocation-regression.spec.ts`
+- [X] T125 Consolidar evidencia TDD solo del gate MVP para bootstrap, activación, PIN, sesión, tenant, RBAC, revocación, auditoría y A/B; registrar fallo previo y éxito posterior — FR-001…FR-029, FR-031…FR-039, SC-001…SC-005, SC-008, SC-010 — `specs/001-multi-tenant-access/evidence/mvp-tdd-results.md`
 
 ## Phase 16: Suite negativa de aislamiento A/B
 
