@@ -81,13 +81,12 @@ beforeAll(async () => {
     SELECT current_database() AS database, current_user AS user,
            current_setting('server_version') AS version
   `;
-  expect(identity).toEqual([
-    expect.objectContaining({
-      database: "bodegia_test",
-      user: "bodegia_test",
-      version: "16.14",
-    }),
-  ]);
+  const [row] = identity;
+  expect(row).toBeDefined();
+  if (row === undefined) throw new Error("PostgreSQL identity row is missing.");
+  expect(row.database).toBe("bodegia_test");
+  expect(row.user).toBe("bodegia_test");
+  expect(row.version).toMatch(/^16\.14\b/u);
 });
 
 beforeEach(async () => {
