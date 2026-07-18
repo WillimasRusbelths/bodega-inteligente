@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "start:performance": "node src/http/main.ts"
   },
   "dependencies": {
     "@bodegia/authz-catalog": "workspace:*",

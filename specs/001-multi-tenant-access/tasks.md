@@ -238,7 +238,7 @@ pairing corresponde al incremento de Phase 12.
 - [ ] T133 [P] Crear E2E combinado Playwright/Maestro para pairing web de un uso y revocación de sesión WEB — FR-030 — `apps/web/e2e/web-pairing.spec.ts`, `apps/mobile/e2e/approve-web-pairing.yaml`
 - [X] T134 [P] Validar en el gate MVP ausencia de PIN, código manual, secreto QR y access/refresh tokens crudos en DB, logs, auditoría y respuestas posteriores — FR-023, FR-024, FR-027, FR-031, FR-034 — `apps/api/test/security/mvp-secret-absence.spec.ts`
 - [ ] T135 [P] Crear pruebas de restauración/backup móvil y fallo biométrico que no migren una sesión utilizable — FR-034, FR-037…FR-039 — `apps/mobile/e2e/device-recovery.yaml`
-- [ ] T136 [P] Crear escenarios k6 para login, refresh, selección de tenant, guard chain, listados y revocación bajo carga — FR-005, FR-018, FR-021, SC-003 — `apps/api/test/performance/access.js`
+- [X] T136 [P] Crear escenarios k6 para login, refresh, selección de tenant, guard chain, listados y revocación bajo carga — FR-005, FR-018, FR-021, SC-003 — `apps/api/test/performance/access.js`
 - [ ] T137 Ejecutar objetivos p95 <300 ms y documentar capacidad del ambiente sin convertirla en SLA definitivo — SC-003 — `specs/001-multi-tenant-access/evidence/performance.md`
 
 ## Phase 18: Automatización mediante GitHub Actions
@@ -247,7 +247,7 @@ pairing corresponde al incremento de Phase 12.
 - [X] T139 [P] Crear workflow del gate MVP para unidades, integración PostgreSQL, contratos, concurrencia y usabilidad automatizable de tenants, activación, sesiones, RBAC, revocación y auditoría — FR-001…FR-029, FR-031…FR-039, SC-002, SC-003, SC-008 — `.github/workflows/mvp-api-tests.yml`
 - [X] T140 [P] Crear workflow de seguridad que bloquee por suite A/B, ausencia de secretos y auditoría append-only — FR-018…FR-027, FR-029, SC-001, SC-004 — `.github/workflows/security-tests.yml`
 - [ ] T141 [P] Crear workflow E2E del gate MVP para administración web y recorrido móvil QR/manual + PIN + tenant, sin pairing, biometría ni dispositivo compartido — FR-005…FR-010, FR-015…FR-017, FR-022…FR-027, FR-031, FR-034…FR-039 — `.github/workflows/mvp-e2e.yml`
-- [ ] T142 Crear workflow k6 programado/manual con artefactos de evidencia y umbrales del plan — SC-003 — `.github/workflows/performance.yml`
+- [X] T142 Crear workflow k6 programado/manual con artefactos de evidencia y umbrales del plan — SC-003 — `.github/workflows/performance.yml`
 
 ## Phase 19: Documentación y validación final
 
