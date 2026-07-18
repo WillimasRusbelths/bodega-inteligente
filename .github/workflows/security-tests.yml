@@ -1,0 +1,69 @@
+name: Security gates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security:
+    name: Tenant isolation and secret safety
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.14
+        env:
+          POSTGRES_USER: bodegia_test
+          POSTGRES_PASSWORD: bodegia_test
+          POSTGRES_DB: bodegia_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bodegia_test -d bodegia_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://bodegia_test:bodegia_test@localhost:5432/bodegia_test?schema=public
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.20.0
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: corepack pnpm exec prisma generate --schema prisma/schema.prisma
+
+      - name: Apply committed Prisma migrations
+        run: corepack pnpm exec prisma migrate deploy
+
+      - name: Existing security suites
+        run: corepack pnpm test:security
+
+      - name: Append-only audit persistence test
+        run: corepack pnpm exec vitest run apps/api/test/persistence/audit-append-only.spec.ts --pool=threads --maxWorkers=1
+
+      - name: Immediate session revocation test
+        run: corepack pnpm exec vitest run apps/api/test/integration/immediate-revocation.spec.ts --pool=threads --maxWorkers=1

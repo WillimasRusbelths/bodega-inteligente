@@ -1,0 +1,13 @@
+{
+  "name": "@bodegia/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@bodegia/api-contract": "workspace:*"
+  },
+  "scripts": {
+    "test": "corepack pnpm --dir ../.. exec vitest run apps/mobile/test --pool=threads --maxWorkers=1",
+    "typecheck": "tsc --noEmit"
+  }
+}

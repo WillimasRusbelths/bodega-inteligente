@@ -1,0 +1,1294 @@
+openapi: 3.1.0
+info:
+  title: BodegIA Identity and Tenant Access API
+  version: 0.1.0-plan
+  description: >-
+    Planning contract for HU-001 through HU-008 and FR-001 through FR-040.
+    It is not generated implementation code.
+servers:
+  - url: /v1
+security:
+  - bearerAuth: []
+tags:
+  - name: Technical tenants
+  - name: Authentication
+  - name: Web pairing
+  - name: Context
+  - name: Memberships
+  - name: Devices
+  - name: Audit
+  - name: Support
+paths:
+  /technical/tenants:
+    post:
+      tags: [Technical tenants]
+      operationId: createTenantWithFirstOwner
+      summary: Create a tenant and its first active owner atomically
+      description: Traces HU-001 and FR-001, FR-002, FR-023.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantRequest'
+      responses:
+        '201':
+          description: Tenant and first owner created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TenantBootstrap' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /technical/tenants/{tenantId}/summary:
+    get:
+      tags: [Technical tenants]
+      operationId: getTechnicalTenantSummary
+      summary: Read minimum technical metadata, never commercial data
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Technical summary
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TechnicalTenantSummary' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /technical/tenants/{tenantId}/status:
+    patch:
+      tags: [Technical tenants]
+      operationId: changeTenantStatus
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, reason]
+              properties:
+                status: { type: string, enum: [ACTIVE, DISABLED] }
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '200': { $ref: '#/components/responses/TenantResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /tenants/current/members:
+    get:
+      tags: [Memberships]
+      operationId: listCurrentTenantMembers
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Members from the active tenant only
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MembershipPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Memberships]
+      operationId: createMembership
+      summary: Register name, phone and initial roles in the active tenant
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateMembershipRequest' }
+      responses:
+        '201':
+          description: Pending membership created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Membership' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /tenants/current/members/{membershipId}:
+    get:
+      tags: [Memberships]
+      operationId: getCurrentTenantMember
+      parameters:
+        - $ref: '#/components/parameters/MembershipId'
+      responses:
+        '200':
+          description: Membership in active tenant
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Membership' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /tenants/current/members/{membershipId}/activation-challenges:
+    post:
+      tags: [Memberships]
+      operationId: issueActivationChallenge
+      summary: Generate distinct one-time QR secret and 8-digit manual alias
+      description: >-
+        Traces FR-031 and FR-039. QR and manual code are returned only in this response; subsequent
+        responses, logs and audit must omit both raw values.
+      parameters:
+        - $ref: '#/components/parameters/MembershipId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [purpose]
+              properties:
+                purpose: { type: string, enum: [INITIAL_ACTIVATION, DEVICE_REACTIVATION] }
+      responses:
+        '201':
+          description: QR secret and manual alias are returned once to the authorized owner
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivationChallengeIssueResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /tenants/current/members/{membershipId}/roles:
+    patch:
+      tags: [Memberships]
+      operationId: replaceMembershipRoles
+      parameters:
+        - $ref: '#/components/parameters/MembershipId'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roles, reason]
+              properties:
+                roles:
+                  type: array
+                  minItems: 1
+                  uniqueItems: true
+                  items: { $ref: '#/components/schemas/RoleCode' }
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '200': { $ref: '#/components/responses/MembershipResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /tenants/current/members/{membershipId}/status:
+    patch:
+      tags: [Memberships]
+      operationId: changeMembershipStatus
+      parameters:
+        - $ref: '#/components/parameters/MembershipId'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, reason]
+              properties:
+                status: { type: string, enum: [ACTIVE, DISABLED] }
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '200': { $ref: '#/components/responses/MembershipResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /tenants/current/members/{membershipId}/devices:
+    get:
+      tags: [Devices]
+      operationId: listMemberDevices
+      parameters:
+        - $ref: '#/components/parameters/MembershipId'
+      responses:
+        '200':
+          description: Authorized device profiles in active tenant
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DeviceProfile' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /tenants/current/members/{membershipId}/devices/{deviceProfileId}:
+    delete:
+      tags: [Devices]
+      operationId: revokeMemberDevice
+      parameters:
+        - $ref: '#/components/parameters/MembershipId'
+        - $ref: '#/components/parameters/DeviceProfileId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '204': { description: Device and linked sessions revoked }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /tenants/current/shared-devices:
+    post:
+      tags: [Devices]
+      operationId: createTenantSharedDevice
+      summary: Create a tenant-managed shared device after the shared-device migration is enabled
+      description: >-
+        Post-MVP operation available only after 0004_biometric_shared_devices. The backend derives
+        managedByTenantId from the active TenantContext; this operation is never used by activation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTenantSharedDeviceRequest' }
+      responses:
+        '201':
+          description: Tenant-managed shared device created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeviceResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /auth/activations:
+    post:
+      tags: [Authentication]
+      operationId: activateDeviceProfile
+      security: []
+      summary: Consume either a QR secret or its server-side manual alias and create a pending-PIN profile
+      description: >-
+        The QR secret and 8-digit manual code are distinct credentials associated server-side with
+        one challenge. Both expire in 15 minutes, share at most 5 attempts and allow one consumption.
+        Rate limiting combines IP, device and pseudonymized identifier. The backend always creates a
+        PERSONAL device; the request schema rejects a client-supplied type, including TENANT_SHARED.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActivateRequest' }
+      responses:
+        '200':
+          description: Generic successful activation result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivationConsumeResponse' }
+        '400': { $ref: '#/components/responses/GenericAuthFailure' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /auth/web-pairings:
+    post:
+      tags: [Web pairing]
+      operationId: createWebPairing
+      security: []
+      summary: Create a short-lived browser pairing request
+      description: >-
+        Traces FR-030. Creates independent approval and browser-polling secrets with at least 128 bits
+        of entropy. The QR contains only the approval secret; neither value is persisted in plaintext.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateWebPairingRequest' }
+      responses:
+        '201':
+          description: One-use pairing request valid for at most five minutes
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebPairingStartResponse' }
+        '400': { $ref: '#/components/responses/GenericAuthFailure' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /auth/web-pairings/{pairingId}:
+    get:
+      tags: [Web pairing]
+      operationId: getWebPairingStatus
+      security:
+        - pairingPollAuth: []
+      summary: Poll and collect the one-time pairing result from the bound browser
+      description: >-
+        Requires pairingId plus the one-time X-Pairing-Poll-Token. The server validates its hash,
+        five-minute TTL, browser binding, rate limit and unconsumed result; pairingId alone never works.
+      parameters:
+        - $ref: '#/components/parameters/PairingId'
+      responses:
+        '200':
+          description: Sanitized status; session tokens appear only once after approved consumption
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebPairingPollResponse' }
+        '400': { $ref: '#/components/responses/GenericAuthFailure' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /auth/web-pairings/{pairingId}/review:
+    get:
+      tags: [Web pairing]
+      operationId: reviewWebPairing
+      security:
+        - bearerAuth: []
+          pairingApprovalAuth: []
+      summary: Review tenant, browser, time and requested scope on an activated mobile device
+      parameters:
+        - $ref: '#/components/parameters/PairingId'
+      responses:
+        '200':
+          description: Review data for the authenticated activated owner device
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebPairingReview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /auth/web-pairings/{pairingId}/approve:
+    post:
+      tags: [Web pairing]
+      operationId: approveWebPairing
+      security:
+        - bearerAuth: []
+          pairingApprovalAuth: []
+      summary: Approve pairing after local PIN or biometric confirmation on mobile
+      description: The request carries device proof only; the browser never receives PIN or biometric data.
+      parameters:
+        - $ref: '#/components/parameters/PairingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApproveWebPairingRequest' }
+      responses:
+        '204': { description: Pairing consumed once and independent WEB session created }
+        '400': { $ref: '#/components/responses/GenericAuthFailure' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /auth/web-pairings/{pairingId}/reject:
+    post:
+      tags: [Web pairing]
+      operationId: rejectWebPairing
+      security:
+        - bearerAuth: []
+          pairingApprovalAuth: []
+      summary: Reject a pending pairing from the authenticated activated mobile device
+      description: >-
+        Requires a valid pending challenge, mobile DeviceProfile and Membership, plus exact tenant
+        and reviewed-context match. The transition is transactional and invalidates the approval
+        secret without creating a WEB session. Repeating the same completed rejection is safely
+        idempotent; APPROVED, EXPIRED, REJECTED or CONSUMED cannot transition to REJECTED.
+      parameters:
+        - $ref: '#/components/parameters/PairingId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RejectWebPairingRequest' }
+      responses:
+        '200':
+          description: Pending pairing rejected without creating a session
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebPairingRejectResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /auth/pin/setup:
+    post:
+      tags: [Authentication]
+      operationId: setupPin
+      summary: Complete activation by setting a six-digit PIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pin]
+              properties:
+                pin: { type: string, pattern: '^[0-9]{6}$', writeOnly: true }
+      responses:
+        '204': { description: PIN configured and profile active }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/pin/unlock:
+    post:
+      tags: [Authentication]
+      operationId: unlockWithPin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, deviceCredential, pin]
+              properties:
+                phone: { type: string, pattern: '^\\+[1-9][0-9]{7,14}$' }
+                deviceCredential: { type: string, writeOnly: true }
+                pin: { type: string, pattern: '^[0-9]{6}$', writeOnly: true }
+      responses:
+        '200':
+          description: Session issued without revealing account state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionCreationResponse' }
+        '400': { $ref: '#/components/responses/GenericAuthFailure' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /auth/biometric/challenges:
+    post:
+      tags: [Authentication]
+      operationId: createBiometricChallenge
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceProfileId]
+              properties:
+                deviceProfileId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Opaque challenge; no biometric data is accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [challengeId, challenge, expiresAt]
+                properties:
+                  challengeId: { type: string, format: uuid }
+                  challenge: { type: string }
+                  expiresAt: { type: string, format: date-time }
+        '400': { $ref: '#/components/responses/GenericAuthFailure' }
+  /auth/biometric/verify:
+    post:
+      tags: [Authentication]
+      operationId: verifyBiometricDeviceProof
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [challengeId, deviceProof]
+              properties:
+                challengeId: { type: string, format: uuid }
+                deviceProof: { type: string, writeOnly: true }
+      responses:
+        '200':
+          description: Session tokens after device proof
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionCreationResponse' }
+        '400': { $ref: '#/components/responses/GenericAuthFailure' }
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      operationId: rotateRefreshToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string, writeOnly: true }
+      responses:
+        '200':
+          description: Rotated tokens within the original eight-hour session
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefreshRotationResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      operationId: logoutCurrentSession
+      responses:
+        '204': { description: Current session family revoked }
+  /me:
+    get:
+      tags: [Context]
+      operationId: getMyIdentity
+      responses:
+        '200':
+          description: Current identity and safe context
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyContext' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/memberships:
+    get:
+      tags: [Context]
+      operationId: listMyActiveMemberships
+      responses:
+        '200':
+          description: Active memberships only
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MembershipChoice' }
+  /sessions/current/tenant:
+    put:
+      tags: [Context]
+      operationId: selectActiveTenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [membershipId]
+              properties:
+                membershipId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Previous active context replaced
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TenantSelectionResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /me/devices:
+    get:
+      tags: [Devices]
+      operationId: listMyDevices
+      responses:
+        '200':
+          description: Own authorized device profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DeviceProfile' }
+  /me/devices/{deviceProfileId}:
+    delete:
+      tags: [Devices]
+      operationId: revokeMyDevice
+      parameters:
+        - $ref: '#/components/parameters/DeviceProfileId'
+      responses:
+        '204': { description: Profile and sessions revoked }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /tenants/current/audit-events:
+    get:
+      tags: [Audit]
+      operationId: listCurrentTenantAuditEvents
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - name: action
+          in: query
+          schema: { type: string }
+        - name: result
+          in: query
+          schema: { type: string, enum: [SUCCEEDED, DENIED, FAILED] }
+      responses:
+        '200':
+          description: Immutable events from current tenant
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditEventPage' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /support/cases:
+    post:
+      tags: [Support]
+      operationId: openSupportCase
+      summary: Open a case after external telemetry was insufficient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, reason]
+              properties:
+                tenantId: { type: string, format: uuid }
+                reason: { type: string, minLength: 10, maxLength: 1000 }
+      responses:
+        '201':
+          description: Case opened without tenant access
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SupportCase' }
+  /support/cases/{caseId}/grants:
+    post:
+      tags: [Support]
+      operationId: approveSupportGrant
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApproveSupportGrantRequest' }
+      responses:
+        '201':
+          description: Time-bound technical grant
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SupportGrant' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /support/grants/{grantId}:
+    delete:
+      tags: [Support]
+      operationId: revokeSupportGrant
+      parameters:
+        - $ref: '#/components/parameters/GrantId'
+      responses:
+        '204': { description: Grant revoked immediately }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /support/cases/{caseId}/close:
+    post:
+      tags: [Support]
+      operationId: closeSupportCase
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+      responses:
+        '204': { description: Case closed and grants revoked }
+  /support/grants/{grantId}/diagnostics/session-health:
+    get:
+      tags: [Support]
+      operationId: getScopedSessionHealth
+      summary: Example allowlisted diagnostic; never returns commercial records
+      parameters:
+        - $ref: '#/components/parameters/GrantId'
+      responses:
+        '200':
+          description: Aggregated technical health only
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  activeSessionCount: { type: integer, minimum: 0 }
+                  revokedSessionCount: { type: integer, minimum: 0 }
+                  serviceStatus: { type: string }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: short-lived-token
+    pairingPollAuth:
+      type: apiKey
+      in: header
+      name: X-Pairing-Poll-Token
+      description: >-
+        Independent opaque browser polling secret returned once when pairing starts. It is never
+        included in the QR, persisted in plaintext, logged or audited.
+    pairingApprovalAuth:
+      type: apiKey
+      in: header
+      name: X-Pairing-Approval-Token
+      description: >-
+        Opaque approval secret encoded by the QR and presented only by an authenticated activated
+        mobile device. It is stored only as a hash and never logged or audited.
+  parameters:
+    TenantId:
+      name: tenantId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MembershipId:
+      name: membershipId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    DeviceProfileId:
+      name: deviceProfileId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PairingId:
+      name: pairingId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CaseId:
+      name: caseId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    GrantId:
+      name: grantId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema: { type: string }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 128 }
+  responses:
+    BadRequest:
+      description: Non-sensitive validation failure
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Session missing, expired or revoked
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Insufficient permission in an already authorized tenant context
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Generic indistinguishable response for unavailable, absent, consumed, expired or cross-tenant resources
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ResourceNotFoundError' }
+    Conflict:
+      description: Stale version, last owner, idempotency or state conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooManyRequests:
+      description: Generic rate limit response
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    GenericAuthFailure:
+      description: Uniform response for unknown, disabled, expired or invalid credentials
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TenantResponse:
+      description: Tenant state
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Tenant' }
+    MembershipResponse:
+      description: Membership state
+      headers:
+        ETag:
+          schema: { type: string }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Membership' }
+  schemas:
+    RoleCode:
+      type: string
+      enum: [owner_admin, seller, inventory_manager]
+    CreateTenantRequest:
+      type: object
+      required: [tenantName, owner]
+      properties:
+        tenantName: { type: string, minLength: 1, maxLength: 160 }
+        owner:
+          $ref: '#/components/schemas/PersonInput'
+    PersonInput:
+      type: object
+      required: [displayName, phone]
+      properties:
+        displayName: { type: string, minLength: 1, maxLength: 120 }
+        phone: { type: string, pattern: '^\\+[1-9][0-9]{7,14}$' }
+    CreateMembershipRequest:
+      allOf:
+        - $ref: '#/components/schemas/PersonInput'
+        - type: object
+          required: [roles]
+          properties:
+            roles:
+              type: array
+              minItems: 1
+              uniqueItems: true
+              items: { $ref: '#/components/schemas/RoleCode' }
+    Tenant:
+      type: object
+      required: [id, name, status, version]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        status: { type: string, enum: [ACTIVE, DISABLED] }
+        version: { type: integer, minimum: 1 }
+    TenantBootstrap:
+      type: object
+      required: [tenant, firstOwner]
+      properties:
+        tenant: { $ref: '#/components/schemas/Tenant' }
+        firstOwner: { $ref: '#/components/schemas/Membership' }
+    TechnicalTenantSummary:
+      type: object
+      additionalProperties: false
+      required: [id, name, status, memberCount, serviceStatus]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        status: { type: string, enum: [ACTIVE, DISABLED] }
+        memberCount: { type: integer, minimum: 0 }
+        serviceStatus: { type: string }
+    Membership:
+      type: object
+      required: [id, tenantId, userId, displayName, status, roles, version]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        displayName: { type: string }
+        status: { type: string, enum: [PENDING_ACTIVATION, ACTIVE, DISABLED] }
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/RoleCode' }
+        version: { type: integer, minimum: 1 }
+    MembershipPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Membership' }
+        nextCursor: { type: [string, 'null'] }
+    MembershipChoice:
+      type: object
+      required: [membershipId, tenantId, tenantName, roles]
+      properties:
+        membershipId: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        tenantName: { type: string }
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/RoleCode' }
+    ActivationChallengeIssueResponse:
+      type: object
+      required: [challengeId, qrSecret, qrPayload, manualCode, expiresAt, maxAttempts]
+      properties:
+        challengeId: { type: string, format: uuid }
+        qrSecret:
+          type: string
+          minLength: 22
+          description: >-
+            Returned once. Never stored in plaintext, logged or audited; the client retains it only
+            long enough to present or transfer the activation QR.
+        qrPayload:
+          type: string
+          description: >-
+            Returned once and encodes only the opaque QR secret, with no readable PII. Never stored
+            in plaintext, logged or audited; retain only for the in-person activation flow.
+        manualCode:
+          type: string
+          pattern: '^[0-9]{8}$'
+          description: >-
+            Temporary server-side alias returned once; not a textual representation of qrSecret.
+            Never stored in plaintext, logged or audited; retain only for in-person delivery.
+        expiresAt:
+          type: string
+          format: date-time
+          description: No later than 15 minutes after issuance.
+        maxAttempts: { type: integer, const: 5 }
+    ActivateRequest:
+      type: object
+      additionalProperties: false
+      required: [phone, credential, device]
+      properties:
+        phone:
+          type: string
+          pattern: '^\\+[1-9][0-9]{7,14}$'
+          description: >-
+            Normalized to E.164, converted to HMAC-SHA-256 with the challenge key version and compared
+            in constant time. Raw E.164 is never copied into the challenge or manual alias.
+        credential:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [type, qrSecret]
+              properties:
+                type: { type: string, const: QR_SECRET }
+                qrSecret: { type: string, writeOnly: true, minLength: 22 }
+            - type: object
+              additionalProperties: false
+              required: [type, manualCode]
+              properties:
+                type: { type: string, const: MANUAL_CODE }
+                manualCode: { type: string, writeOnly: true, pattern: '^[0-9]{8}$' }
+        device: { $ref: '#/components/schemas/PersonalActivationDeviceRequest' }
+    CreateWebPairingRequest:
+      type: object
+      required: [tenantId, membershipId, browser, requestedScopes]
+      properties:
+        tenantId: { type: string, format: uuid }
+        membershipId: { type: string, format: uuid }
+        browser: { type: string, minLength: 1, maxLength: 160 }
+        requestedScopes:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { type: string }
+    WebPairingStartResponse:
+      type: object
+      required: [pairingId, approvalQrPayload, browserPollingSecret, requestedAt, expiresAt]
+      properties:
+        pairingId: { type: string, format: uuid }
+        approvalQrPayload:
+          $ref: '#/components/schemas/ApprovalQrPayload'
+        browserPollingSecret:
+          type: string
+          minLength: 22
+          description: >-
+            Independent >=128-bit secret returned once to the initiating browser. Never persisted in
+            plaintext, logged or audited; retain only to poll and collect this pairing result.
+        requestedAt: { type: string, format: date-time }
+        expiresAt:
+          type: string
+          format: date-time
+          description: No later than five minutes after requestedAt.
+    ApprovalQrPayload:
+      type: string
+      format: uri
+      minLength: 102
+      pattern: '^bodegia://pairing/approve\?pairingId=[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}&secret=[A-Za-z0-9_-]{22,}$'
+      example: 'bodegia://pairing/approve?pairingId=00000000-0000-4000-8000-000000000000&secret=AAAAAAAAAAAAAAAAAAAAAA'
+      description: >-
+        Synthetic example only, never valid for production. The secret is unpadded base64url with at
+        least 128 bits of entropy. The payload contains only pairingId and approval secret, expires
+        with WebPairingChallenge, is never persisted/logged/audited in full, contains no PII,
+        browserPollingSecret or session token, and is not itself a reusable session credential.
+    WebPairingReview:
+      type: object
+      readOnly: true
+      required: [pairingId, tenantName, browser, requestedAt, requestedScopes, expiresAt]
+      properties:
+        pairingId: { type: string, format: uuid }
+        tenantName: { type: string }
+        browser: { type: string }
+        requestedAt: { type: string, format: date-time }
+        requestedScopes:
+          type: array
+          items: { type: string }
+        expiresAt: { type: string, format: date-time }
+    ApproveWebPairingRequest:
+      type: object
+      required: [deviceProfileId, deviceProof]
+      properties:
+        deviceProfileId: { type: string, format: uuid }
+        deviceProof:
+          type: string
+          writeOnly: true
+          description: Proof released after PIN or biometric confirmation; never biometric data.
+    RejectWebPairingRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reasonCode:
+          type: string
+          enum: [USER_REJECTED, UNKNOWN_BROWSER, WRONG_TENANT, REQUEST_NOT_EXPECTED]
+      description: Optional controlled reason only; free text and sensitive data are not accepted.
+    WebPairingRejectResponse:
+      type: object
+      readOnly: true
+      additionalProperties: false
+      required: [pairingId, status, rejectedAt]
+      properties:
+        pairingId: { type: string, format: uuid }
+        status: { type: string, const: REJECTED }
+        rejectedAt: { type: string, format: date-time }
+      description: Contains no session, tokens, pairing secrets, polling secret or commercial data.
+    WebPairingPollResponse:
+      oneOf:
+        - $ref: '#/components/schemas/WebPairingPendingResponse'
+        - $ref: '#/components/schemas/WebPairingApprovedResponse'
+        - $ref: '#/components/schemas/WebPairingRejectedResponse'
+        - $ref: '#/components/schemas/WebPairingExpiredResponse'
+      discriminator:
+        propertyName: status
+        mapping:
+          PENDING: '#/components/schemas/WebPairingPendingResponse'
+          APPROVED: '#/components/schemas/WebPairingApprovedResponse'
+          REJECTED: '#/components/schemas/WebPairingRejectedResponse'
+          EXPIRED: '#/components/schemas/WebPairingExpiredResponse'
+    WebPairingPendingResponse:
+      type: object
+      additionalProperties: false
+      required: [status, pairingId, expiresAt]
+      properties:
+        status: { type: string, const: PENDING }
+        pairingId: { type: string, format: uuid }
+        expiresAt: { type: string, format: date-time }
+    WebPairingApprovedResponse:
+      type: object
+      additionalProperties: false
+      required: [status, pairingId, expiresAt, session]
+      properties:
+        status: { type: string, const: APPROVED }
+        pairingId: { type: string, format: uuid }
+        expiresAt: { type: string, format: date-time }
+        session:
+          allOf:
+            - $ref: '#/components/schemas/WebSessionResultResponse'
+          description: Returned exactly once; delivery invalidates the polling secret and consumes the result.
+    WebPairingRejectedResponse:
+      type: object
+      additionalProperties: false
+      required: [status, pairingId, expiresAt]
+      properties:
+        status: { type: string, const: REJECTED }
+        pairingId: { type: string, format: uuid }
+        expiresAt: { type: string, format: date-time }
+    WebPairingExpiredResponse:
+      type: object
+      additionalProperties: false
+      required: [status, pairingId, expiresAt]
+      properties:
+        status: { type: string, const: EXPIRED }
+        pairingId: { type: string, format: uuid }
+        expiresAt: { type: string, format: date-time }
+    PersonalActivationDeviceRequest:
+      type: object
+      additionalProperties: false
+      required: [installationId, platform, appVersion, deviceCredential]
+      properties:
+        installationId: { type: string, format: uuid }
+        platform: { type: string, enum: [ANDROID, IOS] }
+        appVersion: { type: string }
+        deviceCredential: { type: string, writeOnly: true }
+      description: MVP activation input. Device type is not accepted; the backend authoritatively creates PERSONAL.
+    CreateTenantSharedDeviceRequest:
+      type: object
+      additionalProperties: false
+      required: [installationId, platform, appVersion, deviceCredential, displayName]
+      properties:
+        installationId: { type: string, format: uuid }
+        platform: { type: string, enum: [ANDROID, IOS] }
+        appVersion: { type: string }
+        deviceCredential: { type: string, writeOnly: true }
+        displayName: { type: string, minLength: 1, maxLength: 120 }
+      description: Post-MVP request for a TENANT_SHARED device managed by the active tenant.
+    DeviceResponse:
+      type: object
+      readOnly: true
+      required: [deviceId, type, platform, status]
+      properties:
+        deviceId: { type: string, format: uuid }
+        type: { type: string, const: TENANT_SHARED }
+        platform: { type: string, enum: [ANDROID, IOS] }
+        status: { type: string, enum: [ACTIVE, REVOKED] }
+    ActivationConsumeResponse:
+      type: object
+      required: [deviceProfileId, pinSetupToken, expiresAt]
+      properties:
+        deviceProfileId: { type: string, format: uuid }
+        pinSetupToken:
+          type: string
+          description: >-
+            Returned once after activation consumption. Never stored in plaintext, logged or audited;
+            the client retains it only until PIN setup completes.
+        expiresAt: { type: string, format: date-time }
+    SessionCreationResponse:
+      type: object
+      required: [accessToken, refreshToken, absoluteExpiresAt]
+      properties:
+        accessToken:
+          type: string
+          description: Returned once; never stored in plaintext server-side, logged or audited; retain only for API authorization.
+        refreshToken:
+          type: string
+          description: Returned once; only its hash is stored; never logged or audited; retain only in approved secure client storage.
+        accessExpiresAt: { type: string, format: date-time }
+        absoluteExpiresAt: { type: string, format: date-time }
+        activeContext:
+          oneOf:
+            - $ref: '#/components/schemas/MembershipChoice'
+            - type: 'null'
+    RefreshRotationResponse:
+      type: object
+      required: [accessToken, refreshToken, absoluteExpiresAt]
+      properties:
+        accessToken:
+          type: string
+          description: Newly rotated access token returned once; never persisted in plaintext, logged or audited.
+        refreshToken:
+          type: string
+          description: Newly rotated refresh token returned once; only its hash is stored; never logged or audited.
+        accessExpiresAt: { type: string, format: date-time }
+        absoluteExpiresAt: { type: string, format: date-time }
+        activeContext:
+          oneOf:
+            - $ref: '#/components/schemas/MembershipChoice'
+            - type: 'null'
+    TenantSelectionResponse:
+      type: object
+      required: [accessToken, tokenType, expiresInSeconds, sessionExpiresAt, activeTenant, contextVersion]
+      properties:
+        accessToken:
+          type: string
+          description: New access token for the selected tenant; returned once and never logged or audited.
+        tokenType: { type: string, const: Bearer }
+        expiresInSeconds: { type: integer, minimum: 1, maximum: 600 }
+        sessionExpiresAt:
+          type: string
+          format: date-time
+          description: Existing absolute session expiry; selecting tenant never extends it.
+        activeTenant:
+          allOf:
+            - $ref: '#/components/schemas/MembershipChoice'
+            - type: object
+              required: [capabilities]
+              properties:
+                capabilities:
+                  type: array
+                  uniqueItems: true
+                  items: { type: string }
+        contextVersion: { type: integer, minimum: 1 }
+      description: Does not return or rotate the refresh token. Older access tokens fail contextVersion validation.
+    WebSessionResultResponse:
+      type: object
+      required: [accessToken, refreshToken, absoluteExpiresAt]
+      properties:
+        accessToken:
+          type: string
+          description: WEB access token delivered once; never persisted in plaintext, logged or audited.
+        refreshToken:
+          type: string
+          description: WEB refresh token delivered once; only its hash is stored; never logged or audited.
+        accessExpiresAt: { type: string, format: date-time }
+        absoluteExpiresAt:
+          type: string
+          format: date-time
+          description: No later than eight hours after WEB session creation.
+        activeContext: { $ref: '#/components/schemas/MembershipChoice' }
+    MyContext:
+      type: object
+      required: [userId, displayName, memberships]
+      properties:
+        userId: { type: string, format: uuid }
+        displayName: { type: string }
+        activeContext:
+          oneOf:
+            - $ref: '#/components/schemas/MembershipChoice'
+            - type: 'null'
+        memberships:
+          type: array
+          items: { $ref: '#/components/schemas/MembershipChoice' }
+    DeviceProfile:
+      type: object
+      required: [id, deviceId, type, platform, status, biometricEnabled]
+      properties:
+        id: { type: string, format: uuid }
+        deviceId: { type: string, format: uuid }
+        type: { type: string, enum: [PERSONAL, TENANT_SHARED] }
+        platform: { type: string, enum: [ANDROID, IOS, WEB] }
+        status: { type: string, enum: [PENDING_PIN, ACTIVE, LOCKED, REVOKED] }
+        biometricEnabled: { type: boolean }
+        lastSeenAt: { type: [string, 'null'], format: date-time }
+    AuditEvent:
+      type: object
+      readOnly: true
+      required: [id, action, result, occurredAt, correlationId]
+      properties:
+        id: { type: string, format: uuid }
+        action: { type: string }
+        result: { type: string, enum: [SUCCEEDED, DENIED, FAILED] }
+        actorId: { type: [string, 'null'], format: uuid }
+        targetType: { type: [string, 'null'] }
+        targetId: { type: [string, 'null'], format: uuid }
+        reason: { type: [string, 'null'] }
+        occurredAt: { type: string, format: date-time }
+        correlationId: { type: string }
+        before: { type: [object, 'null'], additionalProperties: true }
+        after: { type: [object, 'null'], additionalProperties: true }
+    AuditEventPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AuditEvent' }
+        nextCursor: { type: [string, 'null'] }
+    SupportCase:
+      type: object
+      required: [id, tenantId, reason, status, openedAt]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        reason: { type: string }
+        status: { type: string, enum: [OPEN, CLOSED, CANCELLED] }
+        openedAt: { type: string, format: date-time }
+        closedAt: { type: [string, 'null'], format: date-time }
+    ApproveSupportGrantRequest:
+      type: object
+      required: [technicalAdminId, scopes, expiresAt]
+      properties:
+        technicalAdminId: { type: string, format: uuid }
+        scopes:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            enum: [session.health.read, device.status.read, auth.events.read]
+        expiresAt:
+          type: string
+          format: date-time
+          description: Must be no later than one hour after grant start.
+    SupportGrant:
+      type: object
+      required: [id, caseId, tenantId, technicalAdminId, approvedByMembershipId, scopes, startsAt, expiresAt, status]
+      properties:
+        id: { type: string, format: uuid }
+        caseId: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        technicalAdminId: { type: string, format: uuid }
+        approvedByMembershipId: { type: string, format: uuid }
+        scopes:
+          type: array
+          items: { type: string }
+        startsAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        status: { type: string, enum: [ACTIVE, EXPIRED, REVOKED, CLOSED] }
+    Error:
+      type: object
+      required: [code, message, correlationId]
+      properties:
+        code:
+          type: string
+          enum:
+            - VALIDATION_ERROR
+            - AUTHENTICATION_FAILED
+            - SESSION_INVALID
+            - INSUFFICIENT_PERMISSION
+            - RESOURCE_NOT_FOUND
+            - STALE_STATE
+            - LAST_ACTIVE_OWNER
+            - ACTIVATION_ALREADY_USED
+            - PROFILE_LOCKED
+            - TOO_MANY_REQUESTS
+        message: { type: string }
+        correlationId: { type: string }
+        fieldErrors:
+          type: array
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field: { type: string }
+              message: { type: string }
+    ResourceNotFoundError:
+      type: object
+      additionalProperties: false
+      required: [code, message, correlationId]
+      properties:
+        code: { type: string, const: RESOURCE_NOT_FOUND }
+        message:
+          type: string
+          description: Safe generic message identical across all unavailable-resource causes.
+        correlationId: { type: string }

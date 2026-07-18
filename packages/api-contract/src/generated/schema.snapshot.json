@@ -1,0 +1,1585 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "BodegIA Identity and Tenant Access API - MVP client subset",
+    "version": "0.1.0-plan",
+    "description": "Planning contract for HU-001 through HU-008 and FR-001 through FR-040. It is not generated implementation code."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "paths": {
+    "/technical/tenants": {
+      "post": {
+        "tags": ["Technical tenants"],
+        "operationId": "createTenantWithFirstOwner",
+        "summary": "Create a tenant and its first active owner atomically",
+        "description": "Traces HU-001 and FR-001, FR-002, FR-023.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tenant and first owner created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantBootstrap"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/technical/tenants/{tenantId}/summary": {
+      "get": {
+        "tags": ["Technical tenants"],
+        "operationId": "getTechnicalTenantSummary",
+        "summary": "Read minimum technical metadata, never commercial data",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TenantId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Technical summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TechnicalTenantSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/technical/tenants/{tenantId}/status": {
+      "patch": {
+        "tags": ["Technical tenants"],
+        "operationId": "changeTenantStatus",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TenantId"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status", "reason"],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["ACTIVE", "DISABLED"]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/TenantResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tenants/current/members": {
+      "get": {
+        "tags": ["Memberships"],
+        "operationId": "listCurrentTenantMembers",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Members from the active tenant only",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Memberships"],
+        "operationId": "createMembership",
+        "summary": "Register name, phone and initial roles in the active tenant",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMembershipRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pending membership created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membership"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tenants/current/members/{membershipId}": {
+      "get": {
+        "tags": ["Memberships"],
+        "operationId": "getCurrentTenantMember",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MembershipId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Membership in active tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membership"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/tenants/current/members/{membershipId}/activation-challenges": {
+      "post": {
+        "tags": ["Memberships"],
+        "operationId": "issueActivationChallenge",
+        "summary": "Generate distinct one-time QR secret and 8-digit manual alias",
+        "description": "Traces FR-031 and FR-039. QR and manual code are returned only in this response; subsequent responses, logs and audit must omit both raw values.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MembershipId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["purpose"],
+                "properties": {
+                  "purpose": {
+                    "type": "string",
+                    "enum": ["INITIAL_ACTIVATION", "DEVICE_REACTIVATION"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "QR secret and manual alias are returned once to the authorized owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationChallengeIssueResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tenants/current/members/{membershipId}/roles": {
+      "patch": {
+        "tags": ["Memberships"],
+        "operationId": "replaceMembershipRoles",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MembershipId"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["roles", "reason"],
+                "properties": {
+                  "roles": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                      "$ref": "#/components/schemas/RoleCode"
+                    }
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/MembershipResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tenants/current/members/{membershipId}/status": {
+      "patch": {
+        "tags": ["Memberships"],
+        "operationId": "changeMembershipStatus",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MembershipId"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status", "reason"],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["ACTIVE", "DISABLED"]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/MembershipResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tenants/current/members/{membershipId}/devices": {
+      "get": {
+        "tags": ["Devices"],
+        "operationId": "listMemberDevices",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MembershipId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized device profiles in active tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceProfile"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/tenants/current/members/{membershipId}/devices/{deviceProfileId}": {
+      "delete": {
+        "tags": ["Devices"],
+        "operationId": "revokeMemberDevice",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MembershipId"
+          },
+          {
+            "$ref": "#/components/parameters/DeviceProfileId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["reason"],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Device and linked sessions revoked"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/auth/activations": {
+      "post": {
+        "tags": ["Authentication"],
+        "operationId": "activateDeviceProfile",
+        "security": [],
+        "summary": "Consume either a QR secret or its server-side manual alias and create a pending-PIN profile",
+        "description": "The QR secret and 8-digit manual code are distinct credentials associated server-side with one challenge. Both expire in 15 minutes, share at most 5 attempts and allow one consumption. Rate limiting combines IP, device and pseudonymized identifier. The backend always creates a PERSONAL device; the request schema rejects a client-supplied type, including TENANT_SHARED.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generic successful activation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationConsumeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/GenericAuthFailure"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/auth/pin/setup": {
+      "post": {
+        "tags": ["Authentication"],
+        "operationId": "setupPin",
+        "summary": "Complete activation by setting a six-digit PIN",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["pin"],
+                "properties": {
+                  "pin": {
+                    "type": "string",
+                    "pattern": "^[0-9]{6}$",
+                    "writeOnly": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "PIN configured and profile active"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/pin/unlock": {
+      "post": {
+        "tags": ["Authentication"],
+        "operationId": "unlockWithPin",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["phone", "deviceCredential", "pin"],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\\\+[1-9][0-9]{7,14}$"
+                  },
+                  "deviceCredential": {
+                    "type": "string",
+                    "writeOnly": true
+                  },
+                  "pin": {
+                    "type": "string",
+                    "pattern": "^[0-9]{6}$",
+                    "writeOnly": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session issued without revealing account state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionCreationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/GenericAuthFailure"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "operationId": "rotateRefreshToken",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "writeOnly": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rotated tokens within the original eight-hour session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshRotationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "operationId": "logoutCurrentSession",
+        "responses": {
+          "204": {
+            "description": "Current session family revoked"
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "tags": ["Context"],
+        "operationId": "getMyIdentity",
+        "responses": {
+          "200": {
+            "description": "Current identity and safe context",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyContext"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/me/memberships": {
+      "get": {
+        "tags": ["Context"],
+        "operationId": "listMyActiveMemberships",
+        "responses": {
+          "200": {
+            "description": "Active memberships only",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MembershipChoice"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/current/tenant": {
+      "put": {
+        "tags": ["Context"],
+        "operationId": "selectActiveTenant",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["membershipId"],
+                "properties": {
+                  "membershipId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Previous active context replaced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantSelectionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/me/devices": {
+      "get": {
+        "tags": ["Devices"],
+        "operationId": "listMyDevices",
+        "responses": {
+          "200": {
+            "description": "Own authorized device profiles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceProfile"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/devices/{deviceProfileId}": {
+      "delete": {
+        "tags": ["Devices"],
+        "operationId": "revokeMyDevice",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DeviceProfileId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Profile and sessions revoked"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/tenants/current/audit-events": {
+      "get": {
+        "tags": ["Audit"],
+        "operationId": "listCurrentTenantAuditEvents",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "result",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["SUCCEEDED", "DENIED", "FAILED"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Immutable events from current tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditEventPage"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 128
+        }
+      },
+      "TenantId": {
+        "name": "tenantId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "IfMatch": {
+        "name": "If-Match",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "MembershipId": {
+        "name": "membershipId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "DeviceProfileId": {
+        "name": "deviceProfileId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "schemas": {
+      "CreateTenantRequest": {
+        "type": "object",
+        "required": ["tenantName", "owner"],
+        "properties": {
+          "tenantName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "owner": {
+            "$ref": "#/components/schemas/PersonInput"
+          }
+        }
+      },
+      "PersonInput": {
+        "type": "object",
+        "required": ["displayName", "phone"],
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\\\+[1-9][0-9]{7,14}$"
+          }
+        }
+      },
+      "TenantBootstrap": {
+        "type": "object",
+        "required": ["tenant", "firstOwner"],
+        "properties": {
+          "tenant": {
+            "$ref": "#/components/schemas/Tenant"
+          },
+          "firstOwner": {
+            "$ref": "#/components/schemas/Membership"
+          }
+        }
+      },
+      "Tenant": {
+        "type": "object",
+        "required": ["id", "name", "status", "version"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "DISABLED"]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "Membership": {
+        "type": "object",
+        "required": [
+          "id",
+          "tenantId",
+          "userId",
+          "displayName",
+          "status",
+          "roles",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING_ACTIVATION", "ACTIVE", "DISABLED"]
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoleCode"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "RoleCode": {
+        "type": "string",
+        "enum": ["owner_admin", "seller", "inventory_manager"]
+      },
+      "Error": {
+        "type": "object",
+        "required": ["code", "message", "correlationId"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "VALIDATION_ERROR",
+              "AUTHENTICATION_FAILED",
+              "SESSION_INVALID",
+              "INSUFFICIENT_PERMISSION",
+              "RESOURCE_NOT_FOUND",
+              "STALE_STATE",
+              "LAST_ACTIVE_OWNER",
+              "ACTIVATION_ALREADY_USED",
+              "PROFILE_LOCKED",
+              "TOO_MANY_REQUESTS"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "correlationId": {
+            "type": "string"
+          },
+          "fieldErrors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["field", "message"],
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "TechnicalTenantSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "status", "memberCount", "serviceStatus"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "DISABLED"]
+          },
+          "memberCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "serviceStatus": {
+            "type": "string"
+          }
+        }
+      },
+      "ResourceNotFoundError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message", "correlationId"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "const": "RESOURCE_NOT_FOUND"
+          },
+          "message": {
+            "type": "string",
+            "description": "Safe generic message identical across all unavailable-resource causes."
+          },
+          "correlationId": {
+            "type": "string"
+          }
+        }
+      },
+      "MembershipPage": {
+        "type": "object",
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Membership"
+            }
+          },
+          "nextCursor": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "CreateMembershipRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PersonInput"
+          },
+          {
+            "type": "object",
+            "required": ["roles"],
+            "properties": {
+              "roles": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "$ref": "#/components/schemas/RoleCode"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ActivationChallengeIssueResponse": {
+        "type": "object",
+        "required": [
+          "challengeId",
+          "qrSecret",
+          "qrPayload",
+          "manualCode",
+          "expiresAt",
+          "maxAttempts"
+        ],
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "qrSecret": {
+            "type": "string",
+            "minLength": 22,
+            "description": "Returned once. Never stored in plaintext, logged or audited; the client retains it only long enough to present or transfer the activation QR."
+          },
+          "qrPayload": {
+            "type": "string",
+            "description": "Returned once and encodes only the opaque QR secret, with no readable PII. Never stored in plaintext, logged or audited; retain only for the in-person activation flow."
+          },
+          "manualCode": {
+            "type": "string",
+            "pattern": "^[0-9]{8}$",
+            "description": "Temporary server-side alias returned once; not a textual representation of qrSecret. Never stored in plaintext, logged or audited; retain only for in-person delivery."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "No later than 15 minutes after issuance."
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "const": 5
+          }
+        }
+      },
+      "DeviceProfile": {
+        "type": "object",
+        "required": [
+          "id",
+          "deviceId",
+          "type",
+          "platform",
+          "status",
+          "biometricEnabled"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["PERSONAL", "TENANT_SHARED"]
+          },
+          "platform": {
+            "type": "string",
+            "enum": ["ANDROID", "IOS", "WEB"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING_PIN", "ACTIVE", "LOCKED", "REVOKED"]
+          },
+          "biometricEnabled": {
+            "type": "boolean"
+          },
+          "lastSeenAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        }
+      },
+      "ActivateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["phone", "credential", "device"],
+        "properties": {
+          "phone": {
+            "type": "string",
+            "pattern": "^\\\\+[1-9][0-9]{7,14}$",
+            "description": "Normalized to E.164, converted to HMAC-SHA-256 with the challenge key version and compared in constant time. Raw E.164 is never copied into the challenge or manual alias."
+          },
+          "credential": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "qrSecret"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "QR_SECRET"
+                  },
+                  "qrSecret": {
+                    "type": "string",
+                    "writeOnly": true,
+                    "minLength": 22
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "manualCode"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "MANUAL_CODE"
+                  },
+                  "manualCode": {
+                    "type": "string",
+                    "writeOnly": true,
+                    "pattern": "^[0-9]{8}$"
+                  }
+                }
+              }
+            ]
+          },
+          "device": {
+            "$ref": "#/components/schemas/PersonalActivationDeviceRequest"
+          }
+        }
+      },
+      "PersonalActivationDeviceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "installationId",
+          "platform",
+          "appVersion",
+          "deviceCredential"
+        ],
+        "properties": {
+          "installationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "platform": {
+            "type": "string",
+            "enum": ["ANDROID", "IOS"]
+          },
+          "appVersion": {
+            "type": "string"
+          },
+          "deviceCredential": {
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "description": "MVP activation input. Device type is not accepted; the backend authoritatively creates PERSONAL."
+      },
+      "ActivationConsumeResponse": {
+        "type": "object",
+        "required": ["deviceProfileId", "pinSetupToken", "expiresAt"],
+        "properties": {
+          "deviceProfileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pinSetupToken": {
+            "type": "string",
+            "description": "Returned once after activation consumption. Never stored in plaintext, logged or audited; the client retains it only until PIN setup completes."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SessionCreationResponse": {
+        "type": "object",
+        "required": ["accessToken", "refreshToken", "absoluteExpiresAt"],
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Returned once; never stored in plaintext server-side, logged or audited; retain only for API authorization."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Returned once; only its hash is stored; never logged or audited; retain only in approved secure client storage."
+          },
+          "accessExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "absoluteExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "activeContext": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MembershipChoice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "MembershipChoice": {
+        "type": "object",
+        "required": ["membershipId", "tenantId", "tenantName", "roles"],
+        "properties": {
+          "membershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantName": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoleCode"
+            }
+          }
+        }
+      },
+      "RefreshRotationResponse": {
+        "type": "object",
+        "required": ["accessToken", "refreshToken", "absoluteExpiresAt"],
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Newly rotated access token returned once; never persisted in plaintext, logged or audited."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Newly rotated refresh token returned once; only its hash is stored; never logged or audited."
+          },
+          "accessExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "absoluteExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "activeContext": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MembershipChoice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "MyContext": {
+        "type": "object",
+        "required": ["userId", "displayName", "memberships"],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "activeContext": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MembershipChoice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "memberships": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MembershipChoice"
+            }
+          }
+        }
+      },
+      "TenantSelectionResponse": {
+        "type": "object",
+        "required": [
+          "accessToken",
+          "tokenType",
+          "expiresInSeconds",
+          "sessionExpiresAt",
+          "activeTenant",
+          "contextVersion"
+        ],
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "New access token for the selected tenant; returned once and never logged or audited."
+          },
+          "tokenType": {
+            "type": "string",
+            "const": "Bearer"
+          },
+          "expiresInSeconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 600
+          },
+          "sessionExpiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Existing absolute session expiry; selecting tenant never extends it."
+          },
+          "activeTenant": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MembershipChoice"
+              },
+              {
+                "type": "object",
+                "required": ["capabilities"],
+                "properties": {
+                  "capabilities": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "contextVersion": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "description": "Does not return or rotate the refresh token. Older access tokens fail contextVersion validation."
+      },
+      "AuditEventPage": {
+        "type": "object",
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEvent"
+            }
+          },
+          "nextCursor": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "AuditEvent": {
+        "type": "object",
+        "readOnly": true,
+        "required": ["id", "action", "result", "occurredAt", "correlationId"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string",
+            "enum": ["SUCCEEDED", "DENIED", "FAILED"]
+          },
+          "actorId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "targetType": {
+            "type": ["string", "null"]
+          },
+          "targetId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "reason": {
+            "type": ["string", "null"]
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "correlationId": {
+            "type": "string"
+          },
+          "before": {
+            "type": ["object", "null"],
+            "additionalProperties": true
+          },
+          "after": {
+            "type": ["object", "null"],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Non-sensitive validation failure",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Session missing, expired or revoked",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Insufficient permission in an already authorized tenant context",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Stale version, last owner, idempotency or state conflict",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Generic indistinguishable response for unavailable, absent, consumed, expired or cross-tenant resources",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ResourceNotFoundError"
+            }
+          }
+        }
+      },
+      "TenantResponse": {
+        "description": "Tenant state",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Tenant"
+            }
+          }
+        }
+      },
+      "MembershipResponse": {
+        "description": "Membership state",
+        "headers": {
+          "ETag": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Membership"
+            }
+          }
+        }
+      },
+      "GenericAuthFailure": {
+        "description": "Uniform response for unknown, disabled, expired or invalid credentials",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Generic rate limit response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}

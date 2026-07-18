@@ -1,0 +1,112 @@
+name: MVP access performance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  k6-access:
+    name: k6 access scenarios
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.14
+        env:
+          POSTGRES_USER: bodegia_test
+          POSTGRES_PASSWORD: bodegia_test
+          POSTGRES_DB: bodegia_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bodegia_test -d bodegia_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://bodegia_test:bodegia_test@127.0.0.1:5432/bodegia_test?schema=public
+      API_BASE_URL: http://127.0.0.1:3000
+      K6_DURATION: 30s
+      K6_RATE: "1"
+      K6_MAX_VUS: "10"
+      TEST_PHONE: ${{ secrets.BODEGIA_K6_PHONE }}
+      TEST_PIN: ${{ secrets.BODEGIA_K6_PIN }}
+      TEST_DEVICE_CREDENTIAL: ${{ secrets.BODEGIA_K6_DEVICE_CREDENTIAL }}
+      TEST_MEMBERSHIP_ID: ${{ secrets.BODEGIA_K6_MEMBERSHIP_ID }}
+      TEST_FOREIGN_MEMBERSHIP_ID: ${{ secrets.BODEGIA_K6_FOREIGN_MEMBERSHIP_ID }}
+      TEST_DEVICE_PROFILE_ID: ${{ secrets.BODEGIA_K6_DEVICE_PROFILE_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.20.0
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: corepack pnpm exec prisma generate --schema prisma/schema.prisma
+
+      - name: Apply committed Prisma migrations
+        run: corepack pnpm exec prisma migrate deploy
+
+      - name: Verify an executable API performance command exists
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          const packageJson = JSON.parse(readFileSync("apps/api/package.json", "utf8"));
+          if (typeof packageJson.scripts?.["start:performance"] !== "string") {
+            throw new Error(
+              "T142 blocked: apps/api/package.json has no start:performance command.",
+            );
+          }
+          NODE
+
+      - name: Start API
+        run: |
+          corepack pnpm --filter @bodegia/api start:performance > api.log 2>&1 &
+          echo $! > api.pid
+
+      - name: Wait for API healthcheck
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error "$API_BASE_URL/health"; then
+              exit 0
+            fi
+            if ! kill -0 "$(cat api.pid)" 2>/dev/null; then
+              cat api.log
+              exit 1
+            fi
+            sleep 1
+          done
+          cat api.log
+          exit 1
+
+      - name: Install k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Run k6 access scenarios
+        run: k6 run --summary-export=performance-summary.json apps/api/test/performance/access.js
+
+      - name: Upload performance artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp-access-performance
+          path: |
+            performance-summary.json
+            api.log
+            specs/001-multi-tenant-access/evidence/performance.md
+          if-no-files-found: warn

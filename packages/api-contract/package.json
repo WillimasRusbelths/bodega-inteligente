@@ -1,0 +1,19 @@
+{
+  "name": "@bodegia/api-contract",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./generated": "./src/generated/index.ts"
+  },
+  "scripts": {
+    "generate": "node scripts/generate-client.mjs && corepack pnpm --dir ../.. exec prettier --write packages/api-contract/src/generated/index.ts packages/api-contract/src/generated/schema.snapshot.json",
+    "test": "corepack pnpm --dir ../.. exec vitest run packages/api-contract/test --pool=threads --maxWorkers=1",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.10.1",
+    "yaml": "2.8.1"
+  }
+}

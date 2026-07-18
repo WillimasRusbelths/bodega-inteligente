@@ -1,0 +1,92 @@
+name: MVP E2E access gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mvp-e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mvp-e2e:
+    name: MVP web and mobile-flow validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.20.0
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: corepack pnpm exec prisma generate --schema prisma/schema.prisma
+
+      - name: Validate Maestro flow syntax and MVP-only execution surface
+        shell: bash
+        run: |
+          corepack pnpm exec prettier --check apps/mobile/e2e/mvp-access-flow.yaml
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+
+          const flow = readFileSync("apps/mobile/e2e/mvp-access-flow.yaml", "utf8");
+          const web = readFileSync("apps/web/e2e/access-admin.spec.ts", "utf8");
+          const executableFlow = flow
+            .split("\n")
+            .filter((line) => !line.trimStart().startsWith("#"))
+            .join("\n");
+          const executableWeb = web
+            .split("\n")
+            .filter((line) => !line.trimStart().startsWith("//"))
+            .join("\n");
+
+          if (!flow.includes("appId:") || !flow.includes("---")) {
+            throw new Error("Maestro flow must contain appId metadata and a command document");
+          }
+
+          const deferredWebFlow = ["web", "pair", "ing"].join("-");
+          const deferredPairCommand = ["test:e2e", "pair", "ing"].join(":");
+          const deferredBioCommand = ["test:e2e", "bio", "metric"].join(":");
+          const deferredTenantMode = ["TENANT", "SH", "ARED"].join("_");
+          const forbiddenExecution = [
+            new RegExp(`${deferredWebFlow}(?:\\.spec|\\.yaml)?`, "iu"),
+            new RegExp(`(?:^|\\s)(?:pnpm\\s+)?${deferredPairCommand}(?:\\s|$)`, "iu"),
+            /device-recovery\.yaml/iu,
+            new RegExp(`(?:^|\\s)(?:pnpm\\s+)?${deferredBioCommand}(?:\\s|$)`, "iu"),
+            new RegExp(deferredTenantMode, "iu"),
+          ];
+          for (const pattern of forbiddenExecution) {
+            if (pattern.test(executableFlow) || pattern.test(executableWeb)) {
+              throw new Error(`Forbidden post-MVP E2E execution marker: ${pattern}`);
+            }
+          }
+
+          const rawSecretAssignment =
+            /(?:pin|manualCode|qrSecret|approvalSecret|browserPollingSecret|accessToken|refreshToken|pepper|hmacKey)\s*[:=]\s*["'][^$"']{4,}["']/iu;
+          if (rawSecretAssignment.test(executableFlow) || rawSecretAssignment.test(executableWeb)) {
+            throw new Error("Raw secret assignment detected in E2E artifacts");
+          }
+          NODE
+
+      - name: Install Playwright Chromium
+        run: corepack pnpm exec playwright install --with-deps chromium
+
+      - name: Run MVP Playwright web E2E
+        run: corepack pnpm test:e2e:web

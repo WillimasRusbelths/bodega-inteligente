@@ -1,0 +1,75 @@
+name: MVP API gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mvp-api-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mvp-api-tests:
+    name: MVP API tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.14
+        env:
+          POSTGRES_USER: bodegia_test
+          POSTGRES_PASSWORD: bodegia_test
+          POSTGRES_DB: bodegia_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bodegia_test -d bodegia_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://bodegia_test:bodegia_test@localhost:5432/bodegia_test?schema=public
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.20.0
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: corepack pnpm exec prisma generate --schema prisma/schema.prisma
+
+      - name: Apply committed Prisma migrations
+        run: corepack pnpm exec prisma migrate deploy
+
+      - name: API unit tests
+        run: corepack pnpm test:unit
+
+      - name: PostgreSQL persistence tests
+        run: corepack pnpm exec vitest run apps/api/test/persistence --pool=threads --maxWorkers=1
+
+      - name: PostgreSQL integration and concurrency tests
+        run: corepack pnpm test:integration
+
+      - name: API contract tests
+        run: corepack pnpm test:contract
+
+      - name: Mobile and web MVP usability unit tests
+        run: corepack pnpm exec vitest run apps/mobile/test apps/web/test --pool=threads --maxWorkers=1

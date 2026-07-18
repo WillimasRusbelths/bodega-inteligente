@@ -1,0 +1,13 @@
+{
+  "name": "@bodegia/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@bodegia/api-contract": "workspace:*"
+  },
+  "scripts": {
+    "test": "corepack pnpm --dir ../.. exec vitest run apps/web/test --pool=threads --maxWorkers=1",
+    "typecheck": "tsc --noEmit"
+  }
+}

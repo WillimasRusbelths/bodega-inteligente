@@ -1,0 +1,384 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum TenantStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum MembershipStatus {
+  PENDING_ACTIVATION
+  ACTIVE
+  DISABLED
+}
+
+enum DeviceType {
+  PERSONAL
+}
+
+enum DevicePlatform {
+  ANDROID
+  IOS
+}
+
+enum DeviceStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum DeviceProfileStatus {
+  PENDING_PIN
+  ACTIVE
+  LOCKED
+  REVOKED
+}
+
+enum SessionPlatform {
+  MOBILE
+}
+
+enum ActivationPurpose {
+  INITIAL_ACTIVATION
+  DEVICE_REACTIVATION
+}
+
+enum ActivationChallengeStatus {
+  ISSUED
+  CONSUMED
+  EXPIRED
+  REVOKED
+}
+
+enum AuditActorType {
+  TECHNICAL_ADMIN
+  USER
+  SYSTEM
+}
+
+enum AuditResult {
+  SUCCEEDED
+  DENIED
+  FAILED
+}
+
+model User {
+  id             String     @id @default(uuid()) @db.Uuid
+  displayName    String     @db.VarChar(120)
+  phoneE164      String     @unique @db.VarChar(16)
+  status         UserStatus @default(ACTIVE)
+  disabledAt     DateTime?  @db.Timestamptz(3)
+  disabledReason String?    @db.VarChar(500)
+  authVersion    Int        @default(1)
+  version        Int        @default(1)
+  createdAt      DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime   @updatedAt @db.Timestamptz(3)
+
+  memberships    Membership[]
+  deviceProfiles DeviceProfile[]
+  sessions       Session[]
+
+  @@index([status])
+}
+
+model Tenant {
+  id                        String       @id @default(uuid()) @db.Uuid
+  name                      String       @db.VarChar(160)
+  status                    TenantStatus @default(ACTIVE)
+  disabledAt                DateTime?    @db.Timestamptz(3)
+  disabledReason            String?      @db.VarChar(500)
+  createdByTechnicalAdminId String       @db.Uuid
+  version                   Int          @default(1)
+  createdAt                 DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime     @updatedAt @db.Timestamptz(3)
+
+  memberships          Membership[]
+  membershipRoles      MembershipRole[]
+  activationChallenges ActivationChallenge[]
+  deviceProfiles       DeviceProfile[]
+  sessions             Session[]
+  auditEvents          AuditEvent[]
+  idempotencyRecords   IdempotencyRecord[]
+
+  @@index([status])
+}
+
+model Membership {
+  id                     String           @id @default(uuid()) @db.Uuid
+  tenantId               String           @db.Uuid
+  userId                 String           @db.Uuid
+  status                 MembershipStatus @default(PENDING_ACTIVATION)
+  joinedAt               DateTime?        @db.Timestamptz(3)
+  createdByMembershipId  String?          @db.Uuid
+  disabledAt             DateTime?        @db.Timestamptz(3)
+  disabledReason         String?          @db.VarChar(500)
+  disabledByMembershipId String?          @db.Uuid
+  version                Int              @default(1)
+  createdAt              DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime         @updatedAt @db.Timestamptz(3)
+
+  tenant                     Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user                       User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdByMembership        Membership?           @relation("MembershipCreatedBy", fields: [tenantId, createdByMembershipId], references: [tenantId, id], onDelete: Restrict)
+  createdMemberships         Membership[]          @relation("MembershipCreatedBy")
+  disabledByMembership       Membership?           @relation("MembershipDisabledBy", fields: [tenantId, disabledByMembershipId], references: [tenantId, id], onDelete: Restrict)
+  disabledMemberships        Membership[]          @relation("MembershipDisabledBy")
+  membershipRoles            MembershipRole[]      @relation("MembershipRoleTarget")
+  assignedMembershipRoles    MembershipRole[]      @relation("MembershipRoleAssignedBy")
+  activationChallenges       ActivationChallenge[] @relation("ActivationTarget")
+  issuedActivationChallenges ActivationChallenge[] @relation("ActivationIssuer")
+  deviceProfiles             DeviceProfile[]
+  activeSessions             Session[]
+  effectiveAuditEvents       AuditEvent[]          @relation("AuditEffectiveMembership")
+
+  @@unique([tenantId, userId])
+  @@unique([tenantId, id])
+  @@index([tenantId, status])
+  @@index([userId, status])
+}
+
+model Role {
+  id             String   @id @default(uuid()) @db.Uuid
+  code           String   @unique @db.VarChar(64)
+  name           String   @db.VarChar(120)
+  catalogVersion Int
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+
+  rolePermissions RolePermission[]
+  membershipRoles MembershipRole[]
+}
+
+model Permission {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique @db.VarChar(120)
+  domain    String   @db.VarChar(64)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  rolePermissions RolePermission[]
+
+  @@index([domain])
+}
+
+model RolePermission {
+  roleId       String   @db.Uuid
+  permissionId String   @db.Uuid
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Restrict)
+
+  @@id([roleId, permissionId])
+}
+
+model MembershipRole {
+  tenantId               String   @db.Uuid
+  membershipId           String   @db.Uuid
+  roleId                 String   @db.Uuid
+  assignedByMembershipId String   @db.Uuid
+  assignedAt             DateTime @default(now()) @db.Timestamptz(3)
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  membership Membership @relation("MembershipRoleTarget", fields: [tenantId, membershipId], references: [tenantId, id], onDelete: Restrict)
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  assignedBy Membership @relation("MembershipRoleAssignedBy", fields: [tenantId, assignedByMembershipId], references: [tenantId, id], onDelete: Restrict)
+
+  @@id([tenantId, membershipId, roleId])
+  @@unique([tenantId, membershipId, roleId])
+  @@index([tenantId, roleId])
+}
+
+model ActivationChallenge {
+  id                        String                    @id @default(uuid()) @db.Uuid
+  tenantId                  String                    @db.Uuid
+  membershipId              String                    @db.Uuid
+  qrSecretHash              Bytes                     @unique
+  formatVersion             String                    @db.VarChar(32)
+  purpose                   ActivationPurpose
+  status                    ActivationChallengeStatus @default(ISSUED)
+  expiresAt                 DateTime                  @db.Timestamptz(3)
+  maxAttempts               Int                       @default(5)
+  failedAttempts            Int                       @default(0)
+  phoneBindingHmac          Bytes
+  phoneBindingKeyVersion    String                    @db.VarChar(32)
+  issuedByMembershipId      String                    @db.Uuid
+  targetDeviceNonce         String?                   @db.VarChar(128)
+  consumedAt                DateTime?                 @db.Timestamptz(3)
+  consumedByDeviceProfileId String?                   @db.Uuid
+  revokedAt                 DateTime?                 @db.Timestamptz(3)
+  createdAt                 DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime                  @updatedAt @db.Timestamptz(3)
+
+  tenant                  Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  membership              Membership             @relation("ActivationTarget", fields: [tenantId, membershipId], references: [tenantId, id], onDelete: Restrict)
+  issuedByMembership      Membership             @relation("ActivationIssuer", fields: [tenantId, issuedByMembershipId], references: [tenantId, id], onDelete: Restrict)
+  consumedByDeviceProfile DeviceProfile?         @relation(fields: [tenantId, consumedByDeviceProfileId], references: [tenantId, id], onDelete: Restrict)
+  manualAlias             ActivationManualAlias?
+
+  @@index([tenantId, status, expiresAt])
+  @@index([tenantId, membershipId])
+}
+
+model ActivationManualAlias {
+  id            String   @id @default(uuid()) @db.Uuid
+  challengeId   String   @unique @db.Uuid
+  codeHash      Bytes    @unique
+  formatVersion String   @db.VarChar(32)
+  expiresAt     DateTime @db.Timestamptz(3)
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+
+  challenge ActivationChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
+model Device {
+  id                    String         @id @default(uuid()) @db.Uuid
+  type                  DeviceType     @default(PERSONAL)
+  installationIdHash    Bytes          @unique
+  platform              DevicePlatform
+  appVersion            String         @db.VarChar(64)
+  status                DeviceStatus   @default(ACTIVE)
+  lastSeenAt            DateTime?      @db.Timestamptz(3)
+  revokedAt             DateTime?      @db.Timestamptz(3)
+  revokedByMembershipId String?        @db.Uuid
+  revokeReason          String?        @db.VarChar(500)
+  createdAt             DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime       @updatedAt @db.Timestamptz(3)
+
+  profiles DeviceProfile[]
+
+  @@index([status])
+}
+
+model DeviceProfile {
+  id                              String              @id @default(uuid()) @db.Uuid
+  tenantId                        String              @db.Uuid
+  deviceId                        String              @db.Uuid
+  userId                          String              @db.Uuid
+  membershipId                    String              @db.Uuid
+  status                          DeviceProfileStatus @default(PENDING_PIN)
+  pinHash                         Bytes?
+  pinSaltVersion                  String?             @db.VarChar(32)
+  pinPepperVersion                String?             @db.VarChar(32)
+  failedPinAttempts               Int                 @default(0)
+  lockedUntil                     DateTime?           @db.Timestamptz(3)
+  deviceCredentialHashOrPublicKey Bytes
+  activatedAt                     DateTime?           @db.Timestamptz(3)
+  revokedAt                       DateTime?           @db.Timestamptz(3)
+  createdAt                       DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt                       DateTime            @updatedAt @db.Timestamptz(3)
+
+  tenant             Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  device             Device                @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  user               User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  membership         Membership            @relation(fields: [tenantId, membershipId], references: [tenantId, id], onDelete: Restrict)
+  consumedChallenges ActivationChallenge[]
+  sessions           Session[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, status])
+  @@index([tenantId, membershipId])
+  @@index([deviceId, status])
+}
+
+model Session {
+  id                 String          @id @default(uuid()) @db.Uuid
+  userId             String          @db.Uuid
+  deviceProfileId    String          @db.Uuid
+  platform           SessionPlatform @default(MOBILE)
+  activeMembershipId String?         @db.Uuid
+  tenantId           String?         @db.Uuid
+  authVersion        Int
+  contextVersion     Int             @default(1)
+  createdAt          DateTime        @default(now()) @db.Timestamptz(3)
+  absoluteExpiresAt  DateTime        @db.Timestamptz(3)
+  lastActivityAt     DateTime        @default(now()) @db.Timestamptz(3)
+  revokedAt          DateTime?       @db.Timestamptz(3)
+  revokeReason       String?         @db.VarChar(500)
+
+  user               User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  deviceProfile      DeviceProfile       @relation(fields: [deviceProfileId], references: [id], onDelete: Restrict)
+  tenant             Tenant?             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  activeMembership   Membership?         @relation(fields: [tenantId, activeMembershipId], references: [tenantId, id], onDelete: Restrict)
+  refreshCredentials RefreshCredential[]
+
+  @@index([userId, revokedAt])
+  @@index([tenantId, activeMembershipId])
+  @@index([deviceProfileId, revokedAt])
+}
+
+model RefreshCredential {
+  id              String    @id @default(uuid()) @db.Uuid
+  sessionId       String    @db.Uuid
+  familyId        String    @db.Uuid
+  tokenHash       Bytes     @unique
+  issuedAt        DateTime  @default(now()) @db.Timestamptz(3)
+  expiresAt       DateTime  @db.Timestamptz(3)
+  rotatedAt       DateTime? @db.Timestamptz(3)
+  replacedById    String?   @unique @db.Uuid
+  revokedAt       DateTime? @db.Timestamptz(3)
+  reuseDetectedAt DateTime? @db.Timestamptz(3)
+
+  session    Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  replacedBy RefreshCredential? @relation("RefreshReplacement", fields: [replacedById], references: [id], onDelete: Restrict)
+  replaces   RefreshCredential? @relation("RefreshReplacement")
+
+  @@index([sessionId, revokedAt])
+  @@index([familyId, revokedAt])
+}
+
+model AuditEvent {
+  id                    String         @id @default(uuid()) @db.Uuid
+  tenantId              String?        @db.Uuid
+  actorType             AuditActorType
+  actorId               String?        @db.Uuid
+  effectiveMembershipId String?        @db.Uuid
+  sessionId             String?        @db.Uuid
+  deviceId              String?        @db.Uuid
+  action                String         @db.VarChar(120)
+  targetType            String         @db.VarChar(120)
+  targetId              String?        @db.Uuid
+  result                AuditResult
+  reasonCode            String?        @db.VarChar(120)
+  beforeSanitized       Json?
+  afterSanitized        Json?
+  correlationId         String         @db.Uuid
+  occurredAt            DateTime       @default(now()) @db.Timestamptz(3)
+
+  tenant              Tenant?     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  effectiveMembership Membership? @relation("AuditEffectiveMembership", fields: [tenantId, effectiveMembershipId], references: [tenantId, id], onDelete: Restrict)
+
+  @@index([tenantId, occurredAt, id])
+  @@index([actorType, actorId, occurredAt])
+  @@index([correlationId])
+}
+
+model IdempotencyRecord {
+  id                    String   @id @default(uuid()) @db.Uuid
+  scopeActorId          String   @db.Uuid
+  tenantId              String?  @db.Uuid
+  operation             String   @db.VarChar(120)
+  idempotencyKeyHash    Bytes
+  requestHash           Bytes
+  responseStatus        Int?
+  responseBodySanitized Json?
+  createdAt             DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt             DateTime @db.Timestamptz(3)
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([scopeActorId, tenantId, operation, idempotencyKeyHash])
+  @@index([tenantId, expiresAt])
+}
