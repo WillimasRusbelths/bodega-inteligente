@@ -17,12 +17,13 @@
     "test:integration": "vitest run apps/api/test/integration --passWithNoTests --pool=threads --maxWorkers=1",
     "test:contract": "vitest run apps/api/test/contract --passWithNoTests --pool=threads --maxWorkers=1",
     "test:security": "vitest run apps/api/test/security --pool=threads --maxWorkers=1",
-    "test:e2e:web": "playwright test",
+    "test:e2e:web": "playwright test apps/web/e2e/access-admin.spec.ts",
     "test:e2e:mobile": "maestro test apps/mobile/e2e",
     "test:performance": "k6 run apps/api/test/performance/access.js"
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",
+    "@playwright/test": "1.52.0",
     "@prisma/client": "6.19.0",
     "@types/node": "22.18.12",
     "eslint": "9.39.1",

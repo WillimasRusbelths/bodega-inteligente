@@ -78,8 +78,8 @@ jobs:
           }
           NODE
 
+      - name: Install Playwright Chromium
+        run: corepack pnpm exec playwright install --with-deps chromium
+
       - name: Run MVP Playwright web E2E
-        # This command intentionally fails until @playwright/test, a config and
-        # a renderable web server are provided; skipped/absent tests must not
-        # make the gate appear green.
         run: corepack pnpm test:e2e:web
