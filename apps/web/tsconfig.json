@@ -1,5 +1,5 @@
 {
   "extends": "../../packages/config/tsconfig.base.json",
   "compilerOptions": { "rootDir": ".", "outDir": "dist", "jsx": "preserve" },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "e2e/**/*.ts"]
 }

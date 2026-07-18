@@ -1,0 +1,26 @@
+# T131 — Maestro E2E del acceso móvil MVP.
+#
+# Estado: PREPARACIÓN BLOQUEADA.
+# La aplicación móvil actual solo contiene máquinas de estado TypeScript y no
+# existe un build nativo renderizable, appId, ejecutable Maestro ni emulador en
+# este repositorio. Por ello no se inventan selectores, credenciales, datos de
+# usuarios ni resultados de ejecución.
+#
+# Cuando el runtime móvil aprobado esté disponible, configurar BODEGIA_MOBILE_APP_ID
+# y reemplazar la lista vacía por comandos Maestro usando testIDs publicados por
+# la aplicación. Comando documentado:
+#   maestro test apps/mobile/e2e/mvp-access-flow.yaml
+#
+# Recorrido requerido (aún no ejecutable):
+# 1. Activación mediante QR opaco o código manual sintético de ocho dígitos.
+# 2. Configuración de PIN de seis dígitos y login.
+# 3. Visualización de memberships activas y selección de tenant.
+# 4. Reemplazo visible del contexto activo.
+# 5. Bloqueo local por inactividad y desbloqueo con PIN.
+# 6. Revocación/cierre total y rechazo de una operación posterior.
+#
+# Exclusiones deliberadas de este flujo: pairing web, biometría, dispositivo
+# compartido, ventas, inventario, clientes, OCR y BI.
+appId: "${BODEGIA_MOBILE_APP_ID}"
+---
+[]

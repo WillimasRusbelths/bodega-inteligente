@@ -1,0 +1,85 @@
+name: MVP E2E access gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mvp-e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mvp-e2e:
+    name: MVP web and mobile-flow validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.20.0
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Validate Maestro flow syntax and MVP-only execution surface
+        shell: bash
+        run: |
+          corepack pnpm exec prettier --check apps/mobile/e2e/mvp-access-flow.yaml
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+
+          const flow = readFileSync("apps/mobile/e2e/mvp-access-flow.yaml", "utf8");
+          const web = readFileSync("apps/web/e2e/access-admin.spec.ts", "utf8");
+          const executableFlow = flow
+            .split("\n")
+            .filter((line) => !line.trimStart().startsWith("#"))
+            .join("\n");
+          const executableWeb = web
+            .split("\n")
+            .filter((line) => !line.trimStart().startsWith("//"))
+            .join("\n");
+
+          if (!flow.includes("appId:") || !flow.includes("---")) {
+            throw new Error("Maestro flow must contain appId metadata and a command document");
+          }
+
+          const forbiddenExecution = [
+            /web-pairing(?:\.spec|\.yaml)?/iu,
+            /(?:^|\s)(?:pnpm\s+)?test:e2e:pairing(?:\s|$)/iu,
+            /device-recovery\.yaml/iu,
+            /(?:^|\s)(?:pnpm\s+)?test:e2e:biometric(?:\s|$)/iu,
+            /TENANT_SHARED/iu,
+          ];
+          for (const pattern of forbiddenExecution) {
+            if (pattern.test(executableFlow) || pattern.test(executableWeb)) {
+              throw new Error(`Forbidden post-MVP E2E execution marker: ${pattern}`);
+            }
+          }
+
+          const rawSecretAssignment =
+            /(?:pin|manualCode|qrSecret|approvalSecret|browserPollingSecret|accessToken|refreshToken|pepper|hmacKey)\s*[:=]\s*["'][^$"']{4,}["']/iu;
+          if (rawSecretAssignment.test(executableFlow) || rawSecretAssignment.test(executableWeb)) {
+            throw new Error("Raw secret assignment detected in E2E artifacts");
+          }
+          NODE
+
+      - name: Run MVP Playwright web E2E
+        # This command intentionally fails until @playwright/test, a config and
+        # a renderable web server are provided; skipped/absent tests must not
+        # make the gate appear green.
+        run: corepack pnpm test:e2e:web
