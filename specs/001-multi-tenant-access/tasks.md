@@ -236,7 +236,7 @@ pairing corresponde al incremento de Phase 12.
 - [ ] T131 [P] Crear E2E Maestro del recorrido MVP: activación QR/manual, PIN, login, selección de tenant, bloqueo y revocación — FR-005…FR-010, FR-031, FR-034…FR-039 — `apps/mobile/e2e/mvp-access-flow.yaml`
 - [ ] T132 [P] Crear E2E Playwright para miembros, roles, último owner, auditoría y errores seguros — FR-015…FR-017, FR-022…FR-027, FR-033 — `apps/web/e2e/access-admin.spec.ts`
 - [ ] T133 [P] Crear E2E combinado Playwright/Maestro para pairing web de un uso y revocación de sesión WEB — FR-030 — `apps/web/e2e/web-pairing.spec.ts`, `apps/mobile/e2e/approve-web-pairing.yaml`
-- [ ] T134 [P] Validar en el gate MVP ausencia de PIN, código manual, secreto QR y access/refresh tokens crudos en DB, logs, auditoría y respuestas posteriores — FR-023, FR-024, FR-027, FR-031, FR-034 — `apps/api/test/security/mvp-secret-absence.spec.ts`
+- [X] T134 [P] Validar en el gate MVP ausencia de PIN, código manual, secreto QR y access/refresh tokens crudos en DB, logs, auditoría y respuestas posteriores — FR-023, FR-024, FR-027, FR-031, FR-034 — `apps/api/test/security/mvp-secret-absence.spec.ts`
 - [ ] T135 [P] Crear pruebas de restauración/backup móvil y fallo biométrico que no migren una sesión utilizable — FR-034, FR-037…FR-039 — `apps/mobile/e2e/device-recovery.yaml`
 - [ ] T136 [P] Crear escenarios k6 para login, refresh, selección de tenant, guard chain, listados y revocación bajo carga — FR-005, FR-018, FR-021, SC-003 — `apps/api/test/performance/access.js`
 - [ ] T137 Ejecutar objetivos p95 <300 ms y documentar capacidad del ambiente sin convertirla en SLA definitivo — SC-003 — `specs/001-multi-tenant-access/evidence/performance.md`
