@@ -225,11 +225,11 @@ pairing corresponde al incremento de Phase 12.
 
 **Historia principal**: HU-007 (P1). **Gate obligatorio del corte MVP**.
 
-- [ ] T126 [P] [HU-007] Crear matriz de rutas y operaciones A/B para lectura, listado, modificación, administración y relaciones anidadas — FR-018…FR-020, FR-029, SC-001 — `apps/api/test/security/tenant-isolation.matrix.ts`
-- [ ] T127 [HU-007] Implementar suite negativa que manipule path, body, query, cursor, IDs y nested writes contra tenant B desde sesión A — FR-018…FR-020, FR-029, SC-001 — `apps/api/test/security/tenant-isolation.spec.ts`
-- [ ] T128 [P] [HU-007] Comparar status/body/tiempo de recurso ajeno e inexistente para impedir enumeración — FR-020, FR-027, FR-029 — `apps/api/test/security/cross-tenant-enumeration.spec.ts`
-- [ ] T129 [P] [HU-007] Verificar constraints compuestos y que ningún fallo A/B lea o mute filas del tenant objetivo — FR-018…FR-020, SC-001 — `apps/api/test/persistence/cross-tenant-constraints.spec.ts`
-- [ ] T130 [HU-007] Convertir la suite A/B en gate reusable para cada nuevo repositorio o endpoint tenant-scoped — FR-018…FR-020, FR-029, SC-001 — `apps/api/test/security/tenant-isolation.harness.ts`
+- [X] T126 [P] [HU-007] Crear matriz de rutas y operaciones A/B para lectura, listado, modificación, administración y relaciones anidadas — FR-018…FR-020, FR-029, SC-001 — `apps/api/test/security/tenant-isolation.matrix.ts`
+- [X] T127 [HU-007] Implementar suite negativa que manipule path, body, query, cursor, IDs y nested writes contra tenant B desde sesión A — FR-018…FR-020, FR-029, SC-001 — `apps/api/test/security/tenant-isolation.spec.ts`
+- [X] T128 [P] [HU-007] Comparar status/body/tiempo de recurso ajeno e inexistente para impedir enumeración — FR-020, FR-027, FR-029 — `apps/api/test/security/cross-tenant-enumeration.spec.ts`
+- [X] T129 [P] [HU-007] Verificar constraints compuestos y que ningún fallo A/B lea o mute filas del tenant objetivo — FR-018…FR-020, SC-001 — `apps/api/test/persistence/cross-tenant-constraints.spec.ts`
+- [X] T130 [HU-007] Convertir la suite A/B en gate reusable para cada nuevo repositorio o endpoint tenant-scoped — FR-018…FR-020, FR-029, SC-001 — `apps/api/test/security/tenant-isolation.harness.ts`
 
 ## Phase 17: Pruebas E2E, seguridad y rendimiento
 
