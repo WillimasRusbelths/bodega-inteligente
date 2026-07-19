@@ -20,6 +20,10 @@ export const errorCatalog = {
     status: 409,
     message: "The resource changed. Reload and try again.",
   },
+  STOCK_INSUFFICIENT: {
+    status: 409,
+    message: "The available stock is insufficient.",
+  },
   LAST_ACTIVE_OWNER: {
     status: 409,
     message: "The last active owner cannot be removed.",

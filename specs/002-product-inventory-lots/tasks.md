@@ -84,15 +84,15 @@ atómico, fuerza errores y verifica rollback, auditoría y rechazo A/B.
 
 - [ ] T031 [P] [US2] Escribir pruebas unitarias de validación de lote, fechas, cantidad, costo y estado en `apps/api/test/unit/lots/lot.service.spec.ts` — FR-007, FR-008, FR-009, FR-010.
 - [ ] T032 [P] [US2] Escribir pruebas de persistencia de Lot, referencias compuestas y prohibición de producto cross-tenant en `apps/api/test/persistence/lot-constraints.spec.ts` — FR-007, FR-009, FR-028.
-- [ ] T033 [P] [US2] Escribir pruebas contractuales de alta/listado/detalle de lotes y del listado tenant-wide con filtros en `apps/api/test/contract/lots.contract.spec.ts`, incluyendo proyecciones de costo por rol — FR-007, FR-008, FR-036, FR-037, FR-039.
-- [ ] T034 [P] [US2] Escribir integración de ingreso atómico, fallo de auditoría, idempotencia y rollback en `apps/api/test/integration/lot-receipt.spec.ts` — FR-015, FR-031, FR-033, SC-002, SC-007.
+- [X] T033 [P] [US2] Escribir pruebas contractuales de alta/listado/detalle de lotes y del listado tenant-wide con filtros en `apps/api/test/contract/lots.contract.spec.ts`, incluyendo proyecciones de costo por rol — FR-007, FR-008, FR-036, FR-037, FR-039.
+- [X] T034 [P] [US2] Escribir integración de ingreso atómico, fallo de auditoría, idempotencia y rollback en `apps/api/test/integration/lot-receipt.spec.ts` — FR-015, FR-031, FR-033, SC-002, SC-007.
 
 ### Implementation for User Story 2
 
 - [X] T035 [P] [US2] Implementar repositorio tenant-aware de lotes en `apps/api/src/modules/lots/repositories/lot.repository.ts` — FR-007, FR-008, FR-028.
-- [ ] T036 [US2] Implementar servicio transaccional de ingreso de lote, movimiento RECEIPT, balance inicial y auditoría en `apps/api/src/modules/lots/services/lot-receipt.service.ts` — FR-008, FR-012, FR-031, FR-033.
-- [ ] T037 [US2] Implementar DTOs estrictos y controlador REST de lotes en `apps/api/src/modules/lots/dto/lot.dto.ts` y `apps/api/src/modules/lots/lots.controller.ts` — FR-007, FR-009, FR-023, FR-038.
-- [ ] T038 [US2] Implementar repositorio/listado tenant-wide de lotes con cursor estable y filtros de producto, categoría, estado, vencimiento y stock, junto con serializadores `LotOperationalResponse`/`LotAdminResponse` en `apps/api/src/modules/lots/repositories/lot.repository.ts` y `apps/api/src/modules/lots/dto/lot-response.dto.ts` — FR-008, FR-036, FR-037.
+- [X] T036 [US2] Implementar servicio transaccional de ingreso de lote, movimiento RECEIPT, balance inicial y auditoría en `apps/api/src/modules/lots/services/lot-receipt.service.ts` — FR-008, FR-012, FR-031, FR-033.
+- [X] T037 [US2] Implementar DTOs estrictos y controlador REST de lotes en `apps/api/src/modules/lots/dto/lot.dto.ts` y `apps/api/src/modules/lots/lots.controller.ts` — FR-007, FR-009, FR-023, FR-038.
+- [X] T038 [US2] Implementar repositorio/listado tenant-wide de lotes con cursor estable y filtros de producto, categoría, estado, vencimiento y stock, junto con serializadores `LotOperationalResponse`/`LotAdminResponse` en `apps/api/src/modules/lots/repositories/lot.repository.ts` y `apps/api/src/modules/lots/dto/lot-response.dto.ts` — FR-008, FR-036, FR-037.
 - [ ] T039 [US2] Añadir pruebas móviles del ingreso básico con datos sintéticos en `apps/mobile/test/inventory/lot-receipt.spec.ts` y flujo preparado en `apps/mobile/e2e/inventory-receipt.yaml` — FR-024, FR-025, SC-010.
 
 ## Phase 5: User Story 3 — Stock, kardex y concurrencia (Priority: P1)
@@ -109,15 +109,15 @@ saldos después de varios movimientos, rollback y carreras concurrentes sobre Po
 - [ ] T041 [P] [US3] Escribir pruebas de persistencia de InventoryMovement/InventoryBalance, append-only y claves tenant-scoped en `apps/api/test/persistence/inventory-movement-constraints.spec.ts` — FR-013, FR-014, FR-028, FR-034, FR-041.
 - [ ] T042 [P] [US3] Escribir pruebas de integración de rollback, idempotencia y concurrencia real en `apps/api/test/integration/inventory-movement.spec.ts` — FR-015, FR-016, FR-033, SC-002, SC-009.
 - [ ] T043 [P] [US3] Escribir suite negativa A/B para categorías, unidades, path, body, query, cursor, nested write y no-enumeración en `apps/api/test/security/inventory-isolation.spec.ts` usando la matriz T009 — FR-027, FR-028, FR-037, FR-042, SC-001.
-- [ ] T044 [P] [US3] Escribir pruebas de privacidad de kardex y costos por rol en `apps/api/test/security/inventory-cost-privacy.spec.ts` — FR-006, FR-036, SC-006.
+- [X] T044 [P] [US3] Escribir pruebas de privacidad de kardex y costos por rol en `apps/api/test/security/inventory-cost-privacy.spec.ts` — FR-006, FR-036, SC-006.
 
 ### Implementation for User Story 3
 
-- [ ] T045 [P] [US3] Implementar repositorios de movimientos y balances con transacciones Prisma en `apps/api/src/modules/inventory/repositories/movement.repository.ts` y `balance.repository.ts` — FR-013, FR-014, FR-028, FR-033.
-- [ ] T046 [US3] Implementar servicio de movimientos con idempotencia, versión/bloqueo, cálculo de delta, rechazo negativo y rollback en `apps/api/src/modules/inventory/services/inventory-movement.service.ts` — FR-012, FR-013, FR-015, FR-016.
-- [ ] T047 [US3] Implementar servicio de stock agregado por producto/lote y cursor en `apps/api/src/modules/inventory/services/inventory-balance.service.ts` — FR-011, FR-037.
-- [ ] T048 [US3] Implementar DTOs, controller REST de balances y movimientos en `apps/api/src/modules/inventory/dto/movement.dto.ts` y `apps/api/src/modules/inventory/inventory.controller.ts` — FR-012, FR-023, FR-038, FR-039.
-- [ ] T049 [US3] Implementar serialización de kardex que oculte costos a seller y errores seguros para stock insuficiente/cross-tenant en `apps/api/src/modules/inventory/dto/inventory-response.dto.ts` — FR-006, FR-027, FR-036.
+- [X] T045 [P] [US3] Implementar repositorios de movimientos y balances con transacciones Prisma en `apps/api/src/modules/inventory/repositories/movement.repository.ts` y `balance.repository.ts` — FR-013, FR-014, FR-028, FR-033.
+- [X] T046 [US3] Implementar servicio de movimientos con idempotencia, versión/bloqueo, cálculo de delta, rechazo negativo y rollback en `apps/api/src/modules/inventory/services/inventory-movement.service.ts` — FR-012, FR-013, FR-015, FR-016.
+- [X] T047 [US3] Implementar servicio de stock agregado por producto/lote y cursor en `apps/api/src/modules/inventory/services/inventory-balance.service.ts` — FR-011, FR-037.
+- [X] T048 [US3] Implementar DTOs, controller REST de balances y movimientos en `apps/api/src/modules/inventory/dto/movement.dto.ts` y `apps/api/src/modules/inventory/inventory.controller.ts` — FR-012, FR-023, FR-038, FR-039.
+- [X] T049 [US3] Implementar serialización de kardex que oculte costos a seller y errores seguros para stock insuficiente/cross-tenant en `apps/api/src/modules/inventory/dto/inventory-response.dto.ts` — FR-006, FR-027, FR-036.
 - [ ] T050 [US3] Añadir pruebas de regresión append-only y fallo de auditoría para cada movimiento en `apps/api/test/integration/inventory-audit-regression.spec.ts` — FR-014, FR-031, FR-032, SC-007.
 
 ## Phase 6: User Story 4 — FEFO y vencimientos (Priority: P1)
