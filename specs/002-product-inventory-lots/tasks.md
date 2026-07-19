@@ -129,15 +129,15 @@ comprueba el orden y prueba el rechazo/permiso de consumo vencido.
 
 ### Tests for User Story 4 (TDD)
 
-- [ ] T051 [P] [US4] Escribir pruebas unitarias de orden FEFO, empates, saldos y fechas UTC en `apps/api/test/unit/inventory/fefo.service.spec.ts` — FR-017, FR-019, SC-004.
-- [ ] T052 [P] [US4] Escribir pruebas negativas de lote vencido, excepción manual, permiso y motivo en `apps/api/test/security/fefo-expired.spec.ts` — FR-018, FR-038, SC-004.
-- [ ] T053 [P] [US4] Escribir integración de sugerencia FEFO y auditoría de excepción en `apps/api/test/integration/fefo.spec.ts` — FR-017, FR-018, FR-031, FR-033.
+- [X] T051 [P] [US4] Escribir pruebas unitarias de orden FEFO, empates, saldos y fechas UTC en `apps/api/test/unit/inventory/fefo.service.spec.ts` — FR-017, FR-019, SC-004.
+- [X] T052 [P] [US4] Escribir pruebas negativas de lote vencido, excepción manual, permiso y motivo en `apps/api/test/security/fefo-expired.spec.ts` — FR-018, FR-038, SC-004.
+- [X] T053 [P] [US4] Escribir integración de sugerencia FEFO y auditoría de excepción en `apps/api/test/integration/fefo.spec.ts` — FR-017, FR-018, FR-031, FR-033.
 
 ### Implementation for User Story 4
 
-- [ ] T054 [US4] Implementar repositorio de consulta FEFO con filtro tenant/lote vigente en `apps/api/src/modules/inventory/repositories/fefo.repository.ts` — FR-017, FR-027, FR-028.
-- [ ] T055 [US4] Implementar servicio de sugerencias y autorización de ajuste vencido en `apps/api/src/modules/inventory/services/fefo.service.ts` — FR-017, FR-018, FR-019.
-- [ ] T056 [US4] Exponer endpoint de sugerencia FEFO y reason code de excepción en `apps/api/src/modules/inventory/inventory.controller.ts` y `apps/api/src/modules/inventory/dto/fefo.dto.ts` — FR-019, FR-023, FR-038, FR-039.
+- [X] T054 [US4] Implementar repositorio de consulta FEFO con filtro tenant/lote vigente en `apps/api/src/modules/inventory/repositories/fefo.repository.ts` — FR-017, FR-027, FR-028.
+- [X] T055 [US4] Implementar servicio de sugerencias y autorización de ajuste vencido en `apps/api/src/modules/inventory/services/fefo.service.ts` — FR-017, FR-018, FR-019.
+- [X] T056 [US4] Exponer endpoint de sugerencia FEFO y reason code de excepción en `apps/api/src/modules/inventory/inventory.controller.ts` y `apps/api/src/modules/inventory/dto/fefo.dto.ts` — FR-019, FR-023, FR-038, FR-039.
 
 ## Phase 7: User Story 5 — Alertas de inventario (Priority: P2)
 
@@ -148,18 +148,18 @@ comprueba las tres alertas, resolución, historial y aislamiento A/B.
 
 ### Tests for User Story 5 (TDD)
 
-- [ ] T057 [P] [US5] Escribir pruebas unitarias de reglas LOW_STOCK, EXPIRING_SOON y EXPIRED y transición activo/resuelto en `apps/api/test/unit/alerts/alert.service.spec.ts` — FR-020, FR-021, FR-022, SC-005.
-- [ ] T058 [P] [US5] Escribir pruebas de persistencia de AlertRule/InventoryAlert, no duplicación activa e historial lógico en `apps/api/test/persistence/alert-constraints.spec.ts` — FR-020, FR-021, FR-034.
-- [ ] T059 [P] [US5] Escribir integración de recálculo después de movimiento, cambio de regla, resolución y fallo transaccional en `apps/api/test/integration/inventory-alerts.spec.ts` — FR-021, FR-022, FR-031, FR-033, SC-005.
-- [ ] T060 [P] [US5] Escribir suite negativa de alertas A/B, filtros, cursores y permisos seller en `apps/api/test/security/alert-isolation.spec.ts` — FR-027, FR-036, FR-037, SC-001, SC-006.
+- [X] T057 [P] [US5] Escribir pruebas unitarias de reglas LOW_STOCK, EXPIRING_SOON y EXPIRED y transición activo/resuelto en `apps/api/test/unit/alerts/alert.service.spec.ts` — FR-020, FR-021, FR-022, SC-005.
+- [X] T058 [P] [US5] Escribir pruebas de persistencia de AlertRule/InventoryAlert, no duplicación activa e historial lógico en `apps/api/test/persistence/alert-constraints.spec.ts` — FR-020, FR-021, FR-034.
+- [X] T059 [P] [US5] Escribir integración de recálculo después de movimiento, cambio de regla, resolución y fallo transaccional en `apps/api/test/integration/inventory-alerts.spec.ts` — FR-021, FR-022, FR-031, FR-033, SC-005.
+- [X] T060 [P] [US5] Escribir suite negativa de alertas A/B, filtros, cursores y permisos seller en `apps/api/test/security/alert-isolation.spec.ts` — FR-027, FR-036, FR-037, SC-001, SC-006.
 
 ### Implementation for User Story 5
 
-- [ ] T061 [P] [US5] Implementar repositorios de reglas y alertas tenant-aware en `apps/api/src/modules/alerts/repositories/alert-rule.repository.ts` y `alert.repository.ts` — FR-020, FR-021, FR-028.
-- [ ] T062 [US5] Implementar servicio de evaluación, deduplicación, resolución e historial en `apps/api/src/modules/alerts/services/alert.service.ts` — FR-021, FR-022, FR-031, FR-034.
-- [ ] T063 [US5] Integrar el recálculo de alertas en las transacciones de lotes y movimientos mediante `apps/api/src/modules/alerts/services/inventory-alert-hook.service.ts` — FR-021, FR-033.
-- [ ] T064 [US5] Implementar DTOs y endpoints de alertas, incluida la resolución en `PATCH /tenants/current/alerts/{alertId}/resolve`, en `apps/api/src/modules/alerts/dto/alert.dto.ts` y `apps/api/src/modules/alerts/alerts.controller.ts` — FR-022, FR-023, FR-038, FR-039.
-- [ ] T065 [US5] Implementar serialización por rol y auditoría de resolución en `apps/api/src/modules/alerts/dto/alert-response.dto.ts` — FR-031, FR-036, SC-006, SC-007.
+- [X] T061 [P] [US5] Implementar repositorios de reglas y alertas tenant-aware en `apps/api/src/modules/alerts/repositories/alert-rule.repository.ts` y `alert.repository.ts` — FR-020, FR-021, FR-028.
+- [X] T062 [US5] Implementar servicio de evaluación, deduplicación, resolución e historial en `apps/api/src/modules/alerts/services/alert.service.ts` — FR-021, FR-022, FR-031, FR-034.
+- [X] T063 [US5] Integrar el recálculo de alertas en las transacciones de lotes y movimientos mediante `apps/api/src/modules/alerts/services/inventory-alert-hook.service.ts` — FR-021, FR-033.
+- [X] T064 [US5] Implementar DTOs y endpoints de alertas, incluida la resolución en `PATCH /tenants/current/alerts/{alertId}/resolve`, en `apps/api/src/modules/alerts/dto/alert.dto.ts` y `apps/api/src/modules/alerts/alerts.controller.ts` — FR-022, FR-023, FR-038, FR-039.
+- [X] T065 [US5] Implementar serialización por rol y auditoría de resolución en `apps/api/src/modules/alerts/dto/alert-response.dto.ts` — FR-031, FR-036, SC-006, SC-007.
 
 ## Phase 8: User Story 6 — Web y móvil (Priority: P2)
 

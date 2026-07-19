@@ -15,6 +15,7 @@ import {
   TenantSessionInvalidError,
 } from "../../access/guards/authorization-errors.js";
 import { AuditService } from "../../audit/services/audit.service.js";
+import { AlertService } from "../../alerts/services/alert.service.js";
 import { parseIfMatch } from "../../../common/http/if-match.js";
 import type {
   CategoryCreateDto,
@@ -658,6 +659,17 @@ export class ProductService {
           where: { tenantId_id: { tenantId: context.tenantId, id } },
           include: this.productInclude,
         });
+        if (
+          dto.minimumStock !== undefined ||
+          dto.expiryAlertDays !== undefined
+        ) {
+          await new AlertService(this.prisma).evaluateInTransaction(
+            transaction,
+            context,
+            id,
+            new Date(),
+          );
+        }
         return {
           result: serializeProduct(result),
           target: result,

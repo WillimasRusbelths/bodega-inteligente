@@ -10,6 +10,8 @@ import {
   TenantSessionInvalidError,
 } from "../../access/guards/authorization-errors.js";
 import { AuditService } from "../../audit/services/audit.service.js";
+import { AlertService } from "../../alerts/services/alert.service.js";
+import { InventoryAlertHookService } from "../../alerts/services/inventory-alert-hook.service.js";
 import { serializeLot } from "../dto/lot-response.dto.js";
 import type { LotCreateDto, LotListQuery, LotStatus } from "../dto/lot.dto.js";
 
@@ -55,6 +57,9 @@ export class LotReceiptService {
   public constructor(
     private readonly prisma: PrismaModule,
     private readonly audit = new AuditService(),
+    private readonly alertHook = new InventoryAlertHookService(
+      new AlertService(prisma),
+    ),
   ) {}
 
   private async assertMembership(
@@ -156,6 +161,12 @@ export class LotReceiptService {
               reservedQuantity: 0,
             },
           });
+          await this.alertHook.evaluate(
+            transaction,
+            context,
+            productId,
+            new Date(),
+          );
           await this.audit.append(transaction, {
             tenantId: context.tenantId,
             actorType: "USER",
