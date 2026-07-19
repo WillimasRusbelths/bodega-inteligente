@@ -22,7 +22,7 @@ restricciones compuestas tenant-scoped.
 **Purpose**: Preparar límites, permisos, configuración y fixtures sin alterar todavía el módulo 001.
 
 - [ ] T001 Documentar el bounded context de catálogo/inventario y sus límites con 001 en `docs/architecture/module-boundaries.md`, incluyendo exclusiones de ventas, clientes, OCR, BI y offline — FR-026, FR-028, FR-044.
-- [ ] T002 [P] Añadir al catálogo tipado de permisos `inventory.products.read`, `inventory.products.write`, `inventory.lots.read`, `inventory.lots.write`, `inventory.stock.read`, `inventory.movements.read`, `inventory.movements.write`, `inventory.alerts.read` e `inventory.alerts.write` en `packages/authz-catalog/src/index.ts` — FR-029, FR-030.
+- [X] T002 [P] Añadir al catálogo tipado de permisos `inventory.products.read`, `inventory.products.write`, `inventory.lots.read`, `inventory.lots.write`, `inventory.stock.read`, `inventory.movements.read`, `inventory.movements.write`, `inventory.alerts.read` e `inventory.alerts.write` en `packages/authz-catalog/src/index.ts` — FR-029, FR-030.
 - [ ] T003 [P] Definir configuración tipada de precisión, moneda, stock mínimo y días de alerta en `packages/config/src/inventory.config.ts` y sus pruebas en `packages/config/src/inventory.config.spec.ts` — FR-020, FR-035, FR-042.
 - [ ] T004 [P] Crear builders de productos, categorías, unidades, lotes, movimientos y alertas A/B con UUID y fechas UTC deterministas en `packages/test-fixtures/src/inventory.ts` y exportarlos desde `packages/test-fixtures/src/index.ts` — FR-001, FR-007, FR-011, SC-001.
 - [ ] T005 [P] Añadir validadores compartidos de cantidad, costo, fecha de vencimiento, SKU, barcode, paginación e idempotencia en `apps/api/src/common/validation/inventory.ts` con pruebas unitarias — FR-003, FR-009, FR-015, FR-035.
@@ -40,7 +40,7 @@ restricciones compuestas tenant-scoped.
 - [ ] T012 [P] Escribir pruebas unitarias de decimal, precisión, fechas UTC, cantidades y costos en `apps/api/test/unit/inventory/quantity-validation.spec.ts` — FR-009, FR-035, SC-002.
 - [ ] T013 [P] Escribir pruebas de transacción y auditoría obligatoria ante rollback, incluyendo categorías y unidades, en `apps/api/test/integration/inventory-audit-transaction.spec.ts` — FR-031, FR-032, FR-033, SC-007.
 - [ ] T014 Implementar el modelo Prisma lógico y la migración versionada futura en `prisma/schema.prisma` y `prisma/migrations/0002_product_inventory_lots/migration.sql`, con rollback ensayado antes de aplicar en pruebas — FR-001, FR-007, FR-011, FR-043.
-- [ ] T015 Implementar repositorio base tenant-aware y transacciones tipadas en `apps/api/src/modules/inventory/repositories/inventory-transaction.repository.ts`, exigiendo `TenantContext` y sin métodos por ID global — FR-026, FR-028, FR-033.
+- [X] T015 Implementar repositorio base tenant-aware y transacciones tipadas en `apps/api/src/modules/inventory/repositories/inventory-transaction.repository.ts`, exigiendo `TenantContext` y sin métodos por ID global — FR-026, FR-028, FR-033.
 - [ ] T016 Implementar guards de tenant/pertenencia/permiso para el dominio en `apps/api/src/modules/inventory/guards/inventory-tenant.guard.ts` y `apps/api/src/modules/inventory/guards/inventory-permission.guard.ts` — FR-026, FR-027, FR-029, FR-030.
 - [ ] T017 [P] Añadir errores seguros `STOCK_INSUFFICIENT`, `LOT_EXPIRED`, `IDEMPOTENCY_CONFLICT`, `STALE_STATE` y `INVENTORY_NOT_FOUND` en `apps/api/src/common/errors/error-catalog.ts` y probar `correlationId` — FR-027, FR-038.
 - [ ] T018 Implementar adaptador de auditoría e idempotencia tenant-scoped en `apps/api/src/modules/inventory/services/inventory-audit.service.ts` y `apps/api/src/modules/inventory/services/inventory-idempotency.service.ts` — FR-015, FR-031, FR-032, FR-033.
@@ -58,14 +58,14 @@ costos.
 ### Tests for User Story 1 (TDD)
 
 - [ ] T020 [P] [US1] Escribir pruebas unitarias de normalización, unicidad y estados de Product, ProductCategory y UnitOfMeasure en `apps/api/test/unit/catalog/product.service.spec.ts` — FR-001, FR-003, FR-004, FR-005, FR-042.
-- [ ] T021 [P] [US1] Escribir pruebas de persistencia para ProductCategory, UnitOfMeasure, Product, unicidad por tenant y referencias cruzadas, incluyendo rechazo de unidades/categorías A↔B, en `apps/api/test/persistence/product-constraints.spec.ts` — FR-001, FR-003, FR-028, FR-042.
+- [X] T021 [P] [US1] Escribir pruebas de persistencia para ProductCategory, UnitOfMeasure, Product, unicidad por tenant y referencias cruzadas, incluyendo rechazo de unidades/categorías A↔B, en `apps/api/test/persistence/product-constraints.spec.ts` — FR-001, FR-003, FR-028, FR-042.
 - [ ] T022 [P] [US1] Escribir pruebas de integración de CRUD, búsqueda, paginación, estado y aislamiento A/B en `apps/api/test/integration/product-catalog.spec.ts` — FR-004, FR-005, FR-027, SC-001.
 - [ ] T023 [P] [US1] Escribir pruebas de privacidad de costos para owner, inventory_manager y seller en `apps/api/test/security/product-cost-privacy.spec.ts` — FR-006, FR-036, SC-006.
 
 ### Implementation for User Story 1
 
-- [ ] T024 [P] [US1] Implementar repositorios tenant-aware de categorías y unidades en `apps/api/src/modules/catalog/repositories/category.repository.ts` y `apps/api/src/modules/catalog/repositories/unit.repository.ts`, con unicidad, estados, `TenantContext` y anti-enumeración — FR-001, FR-028, FR-042.
-- [ ] T025 [P] [US1] Implementar repositorio de productos con búsquedas por nombre/SKU/barcode y cursor tenant-scoped en `apps/api/src/modules/catalog/repositories/product.repository.ts` — FR-003, FR-005, FR-027, FR-037.
+- [X] T024 [P] [US1] Implementar repositorios tenant-aware de categorías y unidades en `apps/api/src/modules/catalog/repositories/category.repository.ts` y `apps/api/src/modules/catalog/repositories/unit.repository.ts`, con unicidad, estados, `TenantContext` y anti-enumeración — FR-001, FR-028, FR-042.
+- [X] T025 [P] [US1] Implementar repositorio de productos con búsquedas por nombre/SKU/barcode y cursor tenant-scoped en `apps/api/src/modules/catalog/repositories/product.repository.ts` — FR-003, FR-005, FR-027, FR-037.
 - [ ] T026 [US1] Implementar DTOs estrictos y validadores de producto, categoría y unidad en `apps/api/src/modules/catalog/dto/product.dto.ts`, `category.dto.ts` y `unit.dto.ts`, con `ProductUpdateRequest` parcial, sin `tenantId` ni campos desconocidos — FR-001, FR-002, FR-035, FR-039.
 - [ ] T027 [US1] Implementar servicio de catálogo con CRUD/estado de categorías y unidades, activación/desactivación lógica de productos, If-Match, idempotencia y AuditEvent en `apps/api/src/modules/catalog/services/product.service.ts` — FR-004, FR-015, FR-016, FR-031, FR-033, FR-042.
 - [ ] T028 [US1] Implementar controller REST de productos/categorías/unidades en `apps/api/src/modules/catalog/catalog.controller.ts` conforme a `contracts/openapi.yaml` — FR-005, FR-023, FR-038, FR-039.
@@ -89,7 +89,7 @@ atómico, fuerza errores y verifica rollback, auditoría y rechazo A/B.
 
 ### Implementation for User Story 2
 
-- [ ] T035 [P] [US2] Implementar repositorio tenant-aware de lotes en `apps/api/src/modules/lots/repositories/lot.repository.ts` — FR-007, FR-008, FR-028.
+- [X] T035 [P] [US2] Implementar repositorio tenant-aware de lotes en `apps/api/src/modules/lots/repositories/lot.repository.ts` — FR-007, FR-008, FR-028.
 - [ ] T036 [US2] Implementar servicio transaccional de ingreso de lote, movimiento RECEIPT, balance inicial y auditoría en `apps/api/src/modules/lots/services/lot-receipt.service.ts` — FR-008, FR-012, FR-031, FR-033.
 - [ ] T037 [US2] Implementar DTOs estrictos y controlador REST de lotes en `apps/api/src/modules/lots/dto/lot.dto.ts` y `apps/api/src/modules/lots/lots.controller.ts` — FR-007, FR-009, FR-023, FR-038.
 - [ ] T038 [US2] Implementar repositorio/listado tenant-wide de lotes con cursor estable y filtros de producto, categoría, estado, vencimiento y stock, junto con serializadores `LotOperationalResponse`/`LotAdminResponse` en `apps/api/src/modules/lots/repositories/lot.repository.ts` y `apps/api/src/modules/lots/dto/lot-response.dto.ts` — FR-008, FR-036, FR-037.
