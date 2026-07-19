@@ -93,7 +93,7 @@ atómico, fuerza errores y verifica rollback, auditoría y rechazo A/B.
 - [X] T036 [US2] Implementar servicio transaccional de ingreso de lote, movimiento RECEIPT, balance inicial y auditoría en `apps/api/src/modules/lots/services/lot-receipt.service.ts` — FR-008, FR-012, FR-031, FR-033.
 - [X] T037 [US2] Implementar DTOs estrictos y controlador REST de lotes en `apps/api/src/modules/lots/dto/lot.dto.ts` y `apps/api/src/modules/lots/lots.controller.ts` — FR-007, FR-009, FR-023, FR-038.
 - [X] T038 [US2] Implementar repositorio/listado tenant-wide de lotes con cursor estable y filtros de producto, categoría, estado, vencimiento y stock, junto con serializadores `LotOperationalResponse`/`LotAdminResponse` en `apps/api/src/modules/lots/repositories/lot.repository.ts` y `apps/api/src/modules/lots/dto/lot-response.dto.ts` — FR-008, FR-036, FR-037.
-- [ ] T039 [US2] Añadir pruebas móviles del ingreso básico con datos sintéticos en `apps/mobile/test/inventory/lot-receipt.spec.ts` y flujo preparado en `apps/mobile/e2e/inventory-receipt.yaml` — FR-024, FR-025, SC-010.
+- [X] T039 [US2] Añadir pruebas móviles del ingreso básico con datos sintéticos en `apps/mobile/test/inventory/lot-receipt.spec.ts` y flujo preparado en `apps/mobile/e2e/inventory-receipt.yaml` — FR-024, FR-025, SC-010.
 
 ## Phase 5: User Story 3 — Stock, kardex y concurrencia (Priority: P1)
 
@@ -171,8 +171,8 @@ datos sintéticos, comprobando estados de carga/vacío/error y aislamiento.
 ### Tests for User Story 6 (TDD)
 
 - [X] T066 [P] [US6] Escribir E2E Playwright de productos, inventario, lotes tenant-wide, filtros, costos y auditoría visible en `apps/web/e2e/product-inventory.spec.ts` — FR-023, FR-036, FR-039, SC-006, SC-010.
-- [ ] T067 [P] [US6] Preparar flujo Maestro de consulta, ingreso básico y alertas en `apps/mobile/e2e/inventory-access-flow.yaml` con datos sintéticos y sin OCR — FR-024, FR-025, FR-044.
-- [ ] T068 [P] [US6] Escribir pruebas de componentes de estados loading/empty/error, etiquetas accesibles, foco/teclado web y accesibilidad móvil del tenant activo en `apps/web/test/product-inventory.spec.tsx` y `apps/mobile/test/inventory.spec.ts` — FR-023, FR-024, SC-010.
+- [X] T067 [P] [US6] Preparar flujo Maestro de consulta, ingreso básico y alertas en `apps/mobile/e2e/inventory-access-flow.yaml` con datos sintéticos y sin OCR — FR-024, FR-025, FR-044.
+- [X] T068 [P] [US6] Escribir pruebas de componentes de estados loading/empty/error, etiquetas accesibles, foco/teclado web y accesibilidad móvil del tenant activo en `apps/web/test/product-inventory.spec.tsx` y `apps/mobile/test/inventory.spec.ts` — FR-023, FR-024, SC-010.
 
 ### Implementation for User Story 6
 
@@ -180,9 +180,9 @@ datos sintéticos, comprobando estados de carga/vacío/error y aislamiento.
 - [X] T070 [US6] Implementar pantalla web de administración de productos y filtros en `apps/web/src/features/products/` — FR-002, FR-005, FR-023.
 - [X] T071 [US6] Implementar pantalla web de inventario, kardex, listado tenant-wide de lotes y vencimientos en `apps/web/src/features/inventory/` y `apps/web/src/features/lots/` — FR-008, FR-011, FR-012, FR-023.
 - [X] T072 [US6] Implementar vista web de alertas con filtros por categoría, stock bajo y vencimiento en `apps/web/src/features/alerts/` — FR-020, FR-021, FR-022, FR-023.
-- [ ] T073 [US6] Implementar cliente móvil y consulta rápida de productos/stock, registro básico de ingreso y alertas en `apps/mobile/src/api/inventory-client.ts` y `apps/mobile/src/features/products/` — FR-006, FR-024.
-- [ ] T074 [US6] Implementar registro móvil básico de ingreso y vista de alertas en `apps/mobile/src/features/inventory/` y `apps/mobile/src/features/alerts/` — FR-024, FR-025.
-- [ ] T075 [US6] Añadir estados de carga, vacío, error seguro, etiquetas accesibles y selector de tenant reutilizando `TenantContext` en web/móvil — FR-026, FR-027, FR-038, SC-001.
+- [X] T073 [US6] Implementar cliente móvil y consulta rápida de productos/stock, registro básico de ingreso y alertas en `apps/mobile/src/api/inventory-client.ts` y `apps/mobile/src/features/products/` — FR-006, FR-024.
+- [X] T074 [US6] Implementar registro móvil básico de ingreso y vista de alertas en `apps/mobile/src/features/inventory/` y `apps/mobile/src/features/alerts/` — FR-024, FR-025.
+- [X] T075 [US6] Añadir estados de carga, vacío, error seguro, etiquetas accesibles y selector de tenant reutilizando `TenantContext` en web/móvil — FR-026, FR-027, FR-038, SC-001.
 
 ## Phase 9: Polish & Cross-Cutting Concerns
 

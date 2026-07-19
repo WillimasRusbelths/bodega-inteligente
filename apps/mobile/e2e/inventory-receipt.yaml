@@ -1,0 +1,6 @@
+# T039 — Flujo de ingreso móvil preparado, no ejecutado.
+# Requiere un build nativo autorizado y los testIDs de producto, vencimiento,
+# cantidad y confirmación publicados por la aplicación.
+appId: "${BODEGIA_MOBILE_APP_ID}"
+---
+[]

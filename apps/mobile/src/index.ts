@@ -2,4 +2,8 @@ export * from "./api/client.js";
 export * from "./features/activation/index.js";
 export * from "./features/auth/index.js";
 export * from "./features/tenant/index.js";
+export * from "./api/inventory-client.js";
+export * from "./features/inventory/index.js";
+export * from "./features/alerts/index.js";
+export * from "./features/products/index.js";
 export * from "./security/secure-store.js";

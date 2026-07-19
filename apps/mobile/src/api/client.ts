@@ -27,7 +27,7 @@ export interface MobileApiClientOptions {
   readonly timeoutMs?: number;
 }
 
-export interface MobileRequest<TBody> {
+export interface MobileRequest<TBody = unknown> {
   readonly method: "GET" | "POST" | "PATCH" | "DELETE";
   readonly path: string;
   readonly body?: TBody;
@@ -79,7 +79,7 @@ export class MobileApiClient {
     }
   }
 
-  public async request<TResponse, TBody = never>(
+  public async request<TResponse, TBody = unknown>(
     request: MobileRequest<TBody>,
   ): Promise<TResponse> {
     const controller = new AbortController();

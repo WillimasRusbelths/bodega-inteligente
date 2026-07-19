@@ -1,0 +1,9 @@
+# T067 — Flujo Maestro preparado para el inventario móvil 002.
+# Estado: PREPARADO, no ejecutado. El repositorio no contiene build nativo,
+# appId real, emulador ni selectores publicados; por eso no se inventan pasos
+# ejecutables ni resultados. Cuando exista el runtime autorizado, publicar los
+# testIDs indicados en la pantalla y reemplazar la lista vacía.
+# Comando: maestro test apps/mobile/e2e/inventory-access-flow.yaml
+appId: "${BODEGIA_MOBILE_APP_ID}"
+---
+[]
