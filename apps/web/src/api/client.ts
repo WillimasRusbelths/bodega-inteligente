@@ -28,7 +28,7 @@ export interface WebApiClientOptions {
   readonly timeoutMs?: number;
 }
 
-export interface WebRequest<TBody> {
+export interface WebRequest<TBody = unknown> {
   readonly method: "GET" | "POST" | "PATCH" | "DELETE";
   readonly path: string;
   readonly body?: TBody;
@@ -77,7 +77,7 @@ export class WebApiClient {
     this.#timeoutMs = options.timeoutMs ?? 15_000;
   }
 
-  public async request<TResponse, TBody = never>(
+  public async request<TResponse, TBody = unknown>(
     request: WebRequest<TBody>,
   ): Promise<TResponse> {
     if (request.tenantScoped === true && this.#activeTenantId() === null) {
