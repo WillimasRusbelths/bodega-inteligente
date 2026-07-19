@@ -1,11 +1,13 @@
 import type { TenantContext } from "../access/context/tenant-context.js";
 import {
   parseBalanceListQuery,
+  parseFefoSuggestionQuery,
   parseMovementCreateDto,
   parseMovementListQuery,
 } from "./dto/index.js";
 import type { InventoryBalanceService } from "./services/inventory-balance.service.js";
 import type { InventoryMovementService } from "./services/inventory-movement.service.js";
+import type { FefoService } from "./services/fefo.service.js";
 import { InventoryMutationError } from "./services/inventory-movement.service.js";
 import { requireIdempotencyKey } from "../catalog/dto/validation.js";
 import { HttpExceptionFilter } from "../../common/errors/http-exception.filter.js";
@@ -26,6 +28,7 @@ export class InventoryController {
   public constructor(
     private readonly movements: InventoryMovementService,
     private readonly balances: InventoryBalanceService,
+    private readonly fefo?: FefoService,
   ) {}
   public listBalances(
     context: TenantContext,
@@ -51,5 +54,15 @@ export class InventoryController {
         requireIdempotencyKey(idempotencyKey),
       ),
     };
+  }
+
+  public suggestFefo(
+    context: TenantContext,
+    query: Record<string, unknown>,
+  ): Promise<unknown> {
+    if (this.fefo === undefined)
+      throw new Error("FEFO service is not configured.");
+    const dto = parseFefoSuggestionQuery(query);
+    return this.fefo.suggest(context, dto.productId, dto.quantity);
   }
 }

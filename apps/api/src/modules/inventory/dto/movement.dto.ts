@@ -17,6 +17,7 @@ export interface MovementCreateDto {
   readonly type: InventoryMovementType;
   readonly quantity: number;
   readonly reason: string;
+  readonly allowExpiredManualAdjustment?: boolean;
 }
 
 export function parseMovementCreateDto(value: unknown): MovementCreateDto {
@@ -48,6 +49,7 @@ export function parseMovementCreateDto(value: unknown): MovementCreateDto {
     type: type as InventoryMovementType,
     quantity,
     reason: text(body["reason"], 1, 240),
+    allowExpiredManualAdjustment: body["allowExpiredManualAdjustment"] === true,
   };
 }
 

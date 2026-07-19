@@ -10,6 +10,9 @@ import {
   TenantSessionInvalidError,
 } from "../../access/guards/authorization-errors.js";
 import { AuditService } from "../../audit/services/audit.service.js";
+import { AlertService } from "../../alerts/services/alert.service.js";
+import { InventoryAlertHookService } from "../../alerts/services/inventory-alert-hook.service.js";
+import { operationalDate } from "./fefo.service.js";
 import { serializeMovement } from "../../lots/dto/lot-response.dto.js";
 import type {
   MovementCreateDto,
@@ -52,6 +55,9 @@ export class InventoryMovementService {
   public constructor(
     private readonly prisma: PrismaModule,
     private readonly audit = new AuditService(),
+    private readonly alertHook = new InventoryAlertHookService(
+      new AlertService(prisma),
+    ),
   ) {}
   private async assertMembership(
     context: TenantContext,
@@ -117,6 +123,25 @@ export class InventoryMovementService {
           });
           if (lot === null || lot.productId !== dto.productId)
             throw new TenantResourceNotFoundError();
+          if (
+            (dto.type === "NEGATIVE_ADJUSTMENT" || dto.type === "WASTE") &&
+            !dto.allowExpiredManualAdjustment
+          ) {
+            const tenant = await transaction.tenant.findUnique({
+              where: { id: context.tenantId },
+              select: { operatingTimeZone: true },
+            });
+            if (tenant === null) throw new TenantResourceNotFoundError();
+            const today = operationalDate(new Date(), tenant.operatingTimeZone);
+            if (lot.expiresAt.toISOString().slice(0, 10) < today)
+              throw new InventoryMutationError("VALIDATION_ERROR");
+          }
+          if (
+            dto.allowExpiredManualAdjustment &&
+            (!context.permissions.includes("inventory.stock.adjust") ||
+              dto.reason.trim().length === 0)
+          )
+            throw new InventoryMutationError("INSUFFICIENT_PERMISSION");
           const before = Number(lot.availableQuantity);
           const delta =
             dto.type === "POSITIVE_ADJUSTMENT" || dto.type === "RECEIPT"
@@ -169,6 +194,12 @@ export class InventoryMovementService {
               reservedQuantity: 0,
             },
           });
+          await this.alertHook.evaluate(
+            transaction,
+            context,
+            dto.productId,
+            new Date(),
+          );
           await this.audit.append(transaction, {
             tenantId: context.tenantId,
             actorType: "USER",

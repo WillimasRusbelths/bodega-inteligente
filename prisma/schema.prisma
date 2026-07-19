@@ -97,6 +97,17 @@ enum InventoryMovementType {
   SALE_OUT
 }
 
+enum InventoryAlertType {
+  LOW_STOCK
+  EXPIRING_SOON
+  EXPIRED
+}
+
+enum InventoryAlertStatus {
+  ACTIVE
+  RESOLVED
+}
+
 model User {
   id             String     @id @default(uuid()) @db.Uuid
   displayName    String     @db.VarChar(120)
@@ -114,6 +125,7 @@ model User {
   sessions           Session[]
   createdLots        Lot[]               @relation("LotCreatedBy")
   inventoryMovements InventoryMovement[] @relation("InventoryMovementActor")
+  resolvedAlerts     InventoryAlert[]    @relation("AlertResolvedBy")
 
   @@index([status])
 }
@@ -125,6 +137,7 @@ model Tenant {
   disabledAt                DateTime?    @db.Timestamptz(3)
   disabledReason            String?      @db.VarChar(500)
   createdByTechnicalAdminId String       @db.Uuid
+  operatingTimeZone         String       @default("America/Lima") @db.VarChar(64)
   version                   Int          @default(1)
   createdAt                 DateTime     @default(now()) @db.Timestamptz(3)
   updatedAt                 DateTime     @updatedAt @db.Timestamptz(3)
@@ -142,6 +155,8 @@ model Tenant {
   lots                 Lot[]
   inventoryMovements   InventoryMovement[]
   inventoryBalances    InventoryBalance[]
+  alertRules           AlertRule[]
+  inventoryAlerts      InventoryAlert[]
 
   @@index([status])
 }
@@ -475,12 +490,14 @@ model Product {
   updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
   deactivatedAt   DateTime?     @db.Timestamptz(3)
 
-  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  category      ProductCategory?    @relation(fields: [tenantId, categoryId], references: [tenantId, id], onDelete: Restrict)
-  unitOfMeasure UnitOfMeasure       @relation(fields: [tenantId, unitOfMeasureId], references: [tenantId, id], onDelete: Restrict)
-  lots          Lot[]
-  movements     InventoryMovement[]
-  balances      InventoryBalance[]
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  category        ProductCategory?    @relation(fields: [tenantId, categoryId], references: [tenantId, id], onDelete: Restrict)
+  unitOfMeasure   UnitOfMeasure       @relation(fields: [tenantId, unitOfMeasureId], references: [tenantId, id], onDelete: Restrict)
+  lots            Lot[]
+  movements       InventoryMovement[]
+  balances        InventoryBalance[]
+  alertRule       AlertRule?
+  inventoryAlerts InventoryAlert[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, sku])
@@ -504,11 +521,12 @@ model Lot {
   createdAt         DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt         DateTime  @updatedAt @db.Timestamptz(3)
 
-  tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  product   Product             @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
-  actor     User                @relation("LotCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
-  movements InventoryMovement[]
-  balance   InventoryBalance?
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  product         Product             @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
+  actor           User                @relation("LotCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  movements       InventoryMovement[]
+  balance         InventoryBalance?
+  inventoryAlerts InventoryAlert[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, productId, id])
@@ -557,4 +575,48 @@ model InventoryBalance {
 
   @@id([tenantId, productId, lotId])
   @@index([tenantId, productId])
+}
+
+model AlertRule {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  productId       String   @db.Uuid
+  minimumStock    Decimal  @db.Decimal(20, 6)
+  expiryAlertDays Int      @default(0)
+  enabled         Boolean  @default(true)
+  version         Int      @default(1)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  product Product @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, productId])
+  @@index([tenantId, enabled])
+}
+
+model InventoryAlert {
+  id             String               @id @default(uuid()) @db.Uuid
+  tenantId       String               @db.Uuid
+  productId      String               @db.Uuid
+  lotId          String?              @db.Uuid
+  type           InventoryAlertType
+  status         InventoryAlertStatus @default(ACTIVE)
+  observedValue  Decimal              @db.Decimal(20, 6)
+  thresholdValue Decimal              @db.Decimal(20, 6)
+  triggeredAt    DateTime             @default(now()) @db.Timestamptz(3)
+  resolvedAt     DateTime?            @db.Timestamptz(3)
+  resolvedBy     String?              @db.Uuid
+  createdAt      DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime             @updatedAt @db.Timestamptz(3)
+
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  product  Product @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
+  lot      Lot?    @relation(fields: [tenantId, productId, lotId], references: [tenantId, productId, id], onDelete: Restrict)
+  resolver User?   @relation("AlertResolvedBy", fields: [resolvedBy], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, id])
+  @@index([tenantId, status, type, triggeredAt])
+  @@index([tenantId, productId, lotId, type, status])
 }
