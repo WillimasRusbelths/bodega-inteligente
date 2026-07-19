@@ -72,6 +72,31 @@ enum AuditResult {
   FAILED
 }
 
+enum CatalogStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum LotStatus {
+  AVAILABLE
+  DEPLETED
+  EXPIRED
+  INACTIVE
+}
+
+enum InventoryMovementType {
+  RECEIPT
+  POSITIVE_ADJUSTMENT
+  NEGATIVE_ADJUSTMENT
+  WASTE
+  SALE_OUT
+}
+
 model User {
   id             String     @id @default(uuid()) @db.Uuid
   displayName    String     @db.VarChar(120)
@@ -84,9 +109,11 @@ model User {
   createdAt      DateTime   @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime   @updatedAt @db.Timestamptz(3)
 
-  memberships    Membership[]
-  deviceProfiles DeviceProfile[]
-  sessions       Session[]
+  memberships        Membership[]
+  deviceProfiles     DeviceProfile[]
+  sessions           Session[]
+  createdLots        Lot[]               @relation("LotCreatedBy")
+  inventoryMovements InventoryMovement[] @relation("InventoryMovementActor")
 
   @@index([status])
 }
@@ -109,6 +136,12 @@ model Tenant {
   sessions             Session[]
   auditEvents          AuditEvent[]
   idempotencyRecords   IdempotencyRecord[]
+  productCategories    ProductCategory[]
+  unitsOfMeasure       UnitOfMeasure[]
+  products             Product[]
+  lots                 Lot[]
+  inventoryMovements   InventoryMovement[]
+  inventoryBalances    InventoryBalance[]
 
   @@index([status])
 }
@@ -137,12 +170,14 @@ model Membership {
   assignedMembershipRoles    MembershipRole[]      @relation("MembershipRoleAssignedBy")
   activationChallenges       ActivationChallenge[] @relation("ActivationTarget")
   issuedActivationChallenges ActivationChallenge[] @relation("ActivationIssuer")
-  deviceProfiles             DeviceProfile[]
+  deviceProfiles             DeviceProfile[]       @relation("DeviceProfileMembership")
+  deviceProfilesByUser       DeviceProfile[]       @relation("DeviceProfileMembershipUser")
   activeSessions             Session[]
   effectiveAuditEvents       AuditEvent[]          @relation("AuditEffectiveMembership")
 
   @@unique([tenantId, userId])
   @@unique([tenantId, id])
+  @@unique([tenantId, id, userId])
   @@index([tenantId, status])
   @@index([userId, status])
 }
@@ -283,7 +318,8 @@ model DeviceProfile {
   tenant             Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   device             Device                @relation(fields: [deviceId], references: [id], onDelete: Restrict)
   user               User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
-  membership         Membership            @relation(fields: [tenantId, membershipId], references: [tenantId, id], onDelete: Restrict)
+  membership         Membership            @relation("DeviceProfileMembership", fields: [tenantId, membershipId], references: [tenantId, id], onDelete: Restrict)
+  membershipUser     Membership            @relation("DeviceProfileMembershipUser", fields: [tenantId, membershipId, userId], references: [tenantId, id, userId], onDelete: Restrict)
   consumedChallenges ActivationChallenge[]
   sessions           Session[]
 
@@ -381,4 +417,144 @@ model IdempotencyRecord {
 
   @@unique([scopeActorId, tenantId, operation, idempotencyKeyHash])
   @@index([tenantId, expiresAt])
+}
+
+model ProductCategory {
+  id             String        @id @default(uuid()) @db.Uuid
+  tenantId       String        @db.Uuid
+  name           String        @db.VarChar(120)
+  normalizedName String        @db.VarChar(120)
+  status         CatalogStatus @default(ACTIVE)
+  version        Int           @default(1)
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  products Product[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, normalizedName])
+  @@index([tenantId, status])
+}
+
+model UnitOfMeasure {
+  id             String        @id @default(uuid()) @db.Uuid
+  tenantId       String        @db.Uuid
+  code           String        @db.VarChar(40)
+  name           String        @db.VarChar(120)
+  normalizedName String        @db.VarChar(120)
+  quantityScale  Int           @default(0)
+  status         CatalogStatus @default(ACTIVE)
+  version        Int           @default(1)
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  products Product[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, code])
+  @@unique([tenantId, normalizedName])
+  @@index([tenantId, status])
+}
+
+model Product {
+  id              String        @id @default(uuid()) @db.Uuid
+  tenantId        String        @db.Uuid
+  name            String        @db.VarChar(160)
+  normalizedName  String        @db.VarChar(160)
+  sku             String?       @db.VarChar(80)
+  barcode         String?       @db.VarChar(80)
+  categoryId      String?       @db.Uuid
+  unitOfMeasureId String        @db.Uuid
+  minimumStock    Decimal       @default(0) @db.Decimal(20, 6)
+  expiryAlertDays Int           @default(0)
+  status          ProductStatus @default(ACTIVE)
+  version         Int           @default(1)
+  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
+  deactivatedAt   DateTime?     @db.Timestamptz(3)
+
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  category      ProductCategory?    @relation(fields: [tenantId, categoryId], references: [tenantId, id], onDelete: Restrict)
+  unitOfMeasure UnitOfMeasure       @relation(fields: [tenantId, unitOfMeasureId], references: [tenantId, id], onDelete: Restrict)
+  lots          Lot[]
+  movements     InventoryMovement[]
+  balances      InventoryBalance[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, sku])
+  @@unique([tenantId, barcode])
+  @@index([tenantId, normalizedName])
+  @@index([tenantId, status])
+}
+
+model Lot {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @db.Uuid
+  productId         String    @db.Uuid
+  receivedAt        DateTime  @db.Timestamptz(3)
+  expiresAt         DateTime  @db.Date
+  initialQuantity   Decimal   @db.Decimal(20, 6)
+  availableQuantity Decimal   @db.Decimal(20, 6)
+  unitCost          Decimal   @db.Decimal(20, 4)
+  status            LotStatus @default(AVAILABLE)
+  version           Int       @default(1)
+  createdBy         String    @db.Uuid
+  createdAt         DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @db.Timestamptz(3)
+
+  tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  product   Product             @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
+  actor     User                @relation("LotCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  movements InventoryMovement[]
+  balance   InventoryBalance?
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, productId, id])
+  @@index([tenantId, productId, status, expiresAt])
+}
+
+model InventoryMovement {
+  id             String                @id @default(uuid()) @db.Uuid
+  tenantId       String                @db.Uuid
+  productId      String                @db.Uuid
+  lotId          String                @db.Uuid
+  type           InventoryMovementType
+  quantity       Decimal               @db.Decimal(20, 6)
+  quantityDelta  Decimal               @db.Decimal(20, 6)
+  balanceBefore  Decimal               @db.Decimal(20, 6)
+  balanceAfter   Decimal               @db.Decimal(20, 6)
+  reason         String                @db.VarChar(240)
+  actorId        String                @db.Uuid
+  idempotencyKey String?               @db.VarChar(128)
+  createdAt      DateTime              @default(now()) @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  product Product @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
+  lot     Lot     @relation(fields: [tenantId, productId, lotId], references: [tenantId, productId, id], onDelete: Restrict)
+  actor   User    @relation("InventoryMovementActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, productId, createdAt, id])
+  @@index([tenantId, lotId, createdAt, id])
+}
+
+model InventoryBalance {
+  tenantId          String   @db.Uuid
+  productId         String   @db.Uuid
+  lotId             String   @db.Uuid
+  availableQuantity Decimal  @db.Decimal(20, 6)
+  reservedQuantity  Decimal  @default(0) @db.Decimal(20, 6)
+  version           Int      @default(1)
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  product Product @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
+  lot     Lot     @relation(fields: [tenantId, productId, lotId], references: [tenantId, productId, id], onDelete: Restrict)
+
+  @@id([tenantId, productId, lotId])
+  @@index([tenantId, productId])
 }
