@@ -1,74 +1,85 @@
 # Evidencia de rendimiento del acceso MVP
 
-Fecha de preparación: 2026-07-18.
-
 ## Estado
 
-T136 queda completada a nivel de artefacto en `apps/api/test/performance/access.js`, con escenarios
-k6 para login mediante PIN, refresh rotatorio, selección de tenant, cadena de
-guards, listado tenant-scoped, revocación, errores anti-enumeración y consulta
-autorizada de auditoría.
+T136 está completada mediante `apps/api/test/performance/access.js`.
+T137 está completada con una ejecución real de k6 en GitHub Actions. Esta
+medición corresponde a un ambiente controlado y no constituye un SLA de
+producción.
 
-T142 queda completada: el workflow usa `start:performance`, espera `GET
-/health` y conserva los artefactos de k6. T137 permanece **sin marcar**.
-No se registran p95, throughput, errores ni
-capacidad hasta disponer de una ejecución real de k6. El umbral de referencia
-del plan es p95 menor a 300 ms para autorización/lecturas de contexto; no se
-considera un SLA productivo.
+## Ejecución verificable
 
-## Datos y seguridad
+| Campo                     | Resultado                                                                              |
+| ------------------------- | -------------------------------------------------------------------------------------- |
+| Ambiente                  | GitHub Actions                                                                         |
+| Workflow                  | `MVP access performance`                                                               |
+| Rama                      | `main`                                                                                 |
+| PostgreSQL                | 16.14, service container                                                               |
+| API                       | Levantada dentro del workflow                                                          |
+| Comando                   | `k6 run --summary-export=performance-summary.json apps/api/test/performance/access.js` |
+| Duración                  | 30 segundos                                                                            |
+| VUs máximos               | 8                                                                                      |
+| Iteraciones completadas   | 247                                                                                    |
+| Iteraciones interrumpidas | 0                                                                                      |
 
-El script recibe teléfono, PIN, credencial de dispositivo, UUIDs de
-membership/dispositivo y el UUID de membership ajeno únicamente mediante
-variables de entorno sintéticas. No contiene credenciales, tokens ni UUIDs
-reales y no imprime cuerpos de respuesta.
+## Escenarios
 
-Las rutas usadas corresponden al contrato OpenAPI vigente:
+Se ejecutaron los ocho escenarios definidos por el script:
 
-- `POST /auth/pin/unlock`
-- `POST /auth/refresh`
-- `PUT /sessions/current/tenant`
-- `GET /me`
-- `GET /tenants/current/members`
-- `DELETE /tenants/current/members/{membershipId}/devices/{deviceProfileId}`
-- `GET /tenants/current/audit-events`
+- `audit`
+- `guard_chain`
+- `login`
+- `refresh`
+- `revocation`
+- `safe_errors`
+- `tenant_listing`
+- `tenant_selection`
 
-La revocación es deliberadamente una operación explícita del escenario y
-requiere datos de prueba proporcionados por el ambiente; no se ejecutó aquí.
+## Resultados k6
 
-## Workflow preparado
+| Métrica                         |          Resultado |
+| ------------------------------- | -----------------: |
+| `http_reqs`                     |                710 |
+| `checks_total`                  |               1420 |
+| `checks_succeeded`              |               1420 |
+| `checks_failed`                 |                  0 |
+| Checks                          |            100.00% |
+| `data_received`                 |             204 kB |
+| `data_sent`                     |             112 kB |
+| `http_req_duration` avg         |          520.27 µs |
+| `http_req_duration` p90         |            1.05 ms |
+| `http_req_duration` p95         |            1.43 ms |
+| `access_operation_duration` avg |          520.27 µs |
+| `access_operation_duration` p90 |            1.05 ms |
+| `access_operation_duration` p95 |            1.43 ms |
+| `access_operation_failures`     |    0.00%, 0 de 710 |
+| `http_req_failed`               | 65.21%, 463 de 710 |
 
-`.github/workflows/performance.yml` se ejecuta solamente con
-`workflow_dispatch`, levanta PostgreSQL 16.14 como servicio de GitHub Actions,
-aplica `prisma migrate deploy`, verifica que exista `start:performance` real de
-la API, instala k6, ejecuta el script y conserva el resumen k6, el log de API y
-este documento como artefactos.
+La ejecución sí realizó solicitudes HTTP reales: `http_reqs=710`,
+`data_received=204 kB` y `data_sent=112 kB`.
 
-## Bloqueos verificables
+`http_req_failed` aparece alto porque k6 clasifica las respuestas 4xx como
+fallidas a nivel HTTP. En este gate, varios escenarios esperan respuestas
+seguras 400/401/404/422 para validar errores seguros, endpoints protegidos y
+ausencia de filtración. La métrica funcional del gate es
+`access_operation_failures`, que quedó en 0.00%.
 
-- `k6` no está instalado en el entorno local (`Get-Command k6` no devuelve un
-  ejecutable), por lo que no se inventó una ejecución ni un resultado T137.
-- Antes de este bloque `apps/api/package.json` solo exponía `typecheck` y no
-  existía listener HTTP. Ahora existe `start:performance` y `GET /health`; el
-  workflow espera ese endpoint antes de ejecutar k6.
-- No se conectó Supabase ni se utilizó Docker local.
+## Thresholds
 
-El valor `DATABASE_URL` local se mantiene como configuración de entorno y no
-se persiste en este artefacto. No se modificaron migraciones.
+| Threshold                             |     Resultado | Estado   |
+| ------------------------------------- | ------------: | -------- |
+| `access_operation_duration p(95)<300` | p95 = 1.43 ms | Cumplido |
+| `access_operation_failures rate<0.05` |  rate = 0.00% | Cumplido |
+| `http_req_duration p(95)<300`         | p95 = 1.43 ms | Cumplido |
 
-## Validaciones locales
+El p95 observado fue 1.43 ms, menor al objetivo p95 <300 ms. El resultado
+corresponde exclusivamente al ambiente controlado de GitHub Actions y no
+constituye un SLA definitivo de producción.
 
-| Comando                                            | Resultado verificable                                                  |
-| -------------------------------------------------- | ---------------------------------------------------------------------- |
-| `corepack pnpm lint`                               | Verde                                                                  |
-| `corepack pnpm format:check`                       | Verde                                                                  |
-| Prettier sobre script, workflow y evidencia        | Verde                                                                  |
-| `corepack pnpm typecheck`                          | Verde                                                                  |
-| `node --check apps/api/test/performance/access.js` | Verde                                                                  |
-| `start:performance` + `GET /health`                | Verde: proceso Node 22 respondió 200 en un puerto de prueba            |
-| `corepack pnpm test:performance`                   | Bloqueado: `k6` no está instalado                                      |
-| `corepack pnpm test`                               | Verde: 2 suites de configuración, 11 suites de seguridad y 109 pruebas |
+## Alcance y seguridad
 
-Estos resultados no constituyen una medición de rendimiento. La evidencia de
-T137 solo podrá actualizarse después de una ejecución real de k6 contra una API
-iniciada y un dataset sintético autorizado.
+El script recibe teléfono, PIN, credencial de dispositivo y UUIDs únicamente
+mediante variables de entorno sintéticas del workflow. No contiene
+credenciales, tokens ni UUIDs reales y no imprime cuerpos de respuesta.
+
+No se modificaron API, Prisma, migraciones ni Supabase para esta medición.

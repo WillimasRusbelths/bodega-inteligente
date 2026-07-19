@@ -239,7 +239,7 @@ pairing corresponde al incremento de Phase 12.
 - [X] T134 [P] Validar en el gate MVP ausencia de PIN, código manual, secreto QR y access/refresh tokens crudos en DB, logs, auditoría y respuestas posteriores — FR-023, FR-024, FR-027, FR-031, FR-034 — `apps/api/test/security/mvp-secret-absence.spec.ts`
 - [ ] T135 [P] Crear pruebas de restauración/backup móvil y fallo biométrico que no migren una sesión utilizable — FR-034, FR-037…FR-039 — `apps/mobile/e2e/device-recovery.yaml`
 - [X] T136 [P] Crear escenarios k6 para login, refresh, selección de tenant, guard chain, listados y revocación bajo carga — FR-005, FR-018, FR-021, SC-003 — `apps/api/test/performance/access.js`
-- [ ] T137 Ejecutar objetivos p95 <300 ms y documentar capacidad del ambiente sin convertirla en SLA definitivo — SC-003 — `specs/001-multi-tenant-access/evidence/performance.md`
+- [X] T137 Ejecutar objetivos p95 <300 ms y documentar capacidad del ambiente sin convertirla en SLA definitivo — SC-003 — `specs/001-multi-tenant-access/evidence/performance.md`
 
 ## Phase 18: Automatización mediante GitHub Actions
 
