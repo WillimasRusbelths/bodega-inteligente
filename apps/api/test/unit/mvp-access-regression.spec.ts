@@ -101,12 +101,74 @@ describe("MVP access unit regression [T119]", () => {
 
   it("keeps the approved RBAC catalog closed and deterministic", () => {
     expect(ROLE_CODES).toEqual(["owner_admin", "seller", "inventory_manager"]);
-    expect(permissionsForRoles(["seller", "inventory_manager"])).toEqual([
-      "inventory.lots.read",
+    expect(PERMISSION_CODES).toEqual([
+      "access.memberships.read",
+      "access.memberships.manage",
+      "access.roles.read",
+      "access.roles.manage",
+      "access.audit.read",
       "inventory.products.read",
+      "inventory.products.write",
+      "inventory.lots.read",
+      "inventory.lots.write",
+      "inventory.stock.read",
+      "inventory.stock.adjust",
+      "inventory.movements.read",
+      "inventory.movements.write",
+      "inventory.alerts.read",
+      "inventory.alerts.write",
+    ]);
+    expect(permissionsForRoles(["seller"])).toEqual(["inventory.stock.read"]);
+    expect(permissionsForRoles(["inventory_manager"])).toEqual([
+      "inventory.alerts.read",
+      "inventory.alerts.write",
+      "inventory.lots.read",
+      "inventory.lots.write",
+      "inventory.movements.read",
+      "inventory.movements.write",
+      "inventory.products.read",
+      "inventory.products.write",
       "inventory.stock.adjust",
       "inventory.stock.read",
     ]);
+    expect(permissionsForRoles(["owner_admin"])).toEqual([
+      "access.audit.read",
+      "access.memberships.manage",
+      "access.memberships.read",
+      "access.roles.manage",
+      "access.roles.read",
+      "inventory.alerts.read",
+      "inventory.alerts.write",
+      "inventory.lots.read",
+      "inventory.lots.write",
+      "inventory.movements.read",
+      "inventory.movements.write",
+      "inventory.products.read",
+      "inventory.products.write",
+      "inventory.stock.adjust",
+      "inventory.stock.read",
+    ]);
+    expect(permissionsForRoles(["seller", "inventory_manager"])).toEqual([
+      "inventory.alerts.read",
+      "inventory.alerts.write",
+      "inventory.lots.read",
+      "inventory.lots.write",
+      "inventory.movements.read",
+      "inventory.movements.write",
+      "inventory.products.read",
+      "inventory.products.write",
+      "inventory.stock.adjust",
+      "inventory.stock.read",
+    ]);
+    const sellerPermissions = permissionsForRoles(["seller"]);
+    expect(
+      sellerPermissions.some((permission) => permission.endsWith(".write")),
+    ).toBe(false);
+    expect(
+      sellerPermissions.some((permission) =>
+        /cost|margin|price/iu.test(permission),
+      ),
+    ).toBe(false);
     expect(new Set(PERMISSION_CODES).size).toBe(PERMISSION_CODES.length);
     expect(() => permissionsForRoles(["unknown-role"])).toThrow(
       "Unknown authorization role",
