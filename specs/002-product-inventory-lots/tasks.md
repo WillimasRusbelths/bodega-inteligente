@@ -59,17 +59,17 @@ costos.
 
 - [ ] T020 [P] [US1] Escribir pruebas unitarias de normalización, unicidad y estados de Product, ProductCategory y UnitOfMeasure en `apps/api/test/unit/catalog/product.service.spec.ts` — FR-001, FR-003, FR-004, FR-005, FR-042.
 - [X] T021 [P] [US1] Escribir pruebas de persistencia para ProductCategory, UnitOfMeasure, Product, unicidad por tenant y referencias cruzadas, incluyendo rechazo de unidades/categorías A↔B, en `apps/api/test/persistence/product-constraints.spec.ts` — FR-001, FR-003, FR-028, FR-042.
-- [ ] T022 [P] [US1] Escribir pruebas de integración de CRUD, búsqueda, paginación, estado y aislamiento A/B en `apps/api/test/integration/product-catalog.spec.ts` — FR-004, FR-005, FR-027, SC-001.
-- [ ] T023 [P] [US1] Escribir pruebas de privacidad de costos para owner, inventory_manager y seller en `apps/api/test/security/product-cost-privacy.spec.ts` — FR-006, FR-036, SC-006.
+- [X] T022 [P] [US1] Escribir pruebas de integración de CRUD, búsqueda, paginación, estado y aislamiento A/B en `apps/api/test/integration/product-catalog.spec.ts` — FR-004, FR-005, FR-027, SC-001.
+- [X] T023 [P] [US1] Escribir pruebas de privacidad de costos para owner, inventory_manager y seller en `apps/api/test/security/product-cost-privacy.spec.ts` — FR-006, FR-036, SC-006.
 
 ### Implementation for User Story 1
 
 - [X] T024 [P] [US1] Implementar repositorios tenant-aware de categorías y unidades en `apps/api/src/modules/catalog/repositories/category.repository.ts` y `apps/api/src/modules/catalog/repositories/unit.repository.ts`, con unicidad, estados, `TenantContext` y anti-enumeración — FR-001, FR-028, FR-042.
 - [X] T025 [P] [US1] Implementar repositorio de productos con búsquedas por nombre/SKU/barcode y cursor tenant-scoped en `apps/api/src/modules/catalog/repositories/product.repository.ts` — FR-003, FR-005, FR-027, FR-037.
-- [ ] T026 [US1] Implementar DTOs estrictos y validadores de producto, categoría y unidad en `apps/api/src/modules/catalog/dto/product.dto.ts`, `category.dto.ts` y `unit.dto.ts`, con `ProductUpdateRequest` parcial, sin `tenantId` ni campos desconocidos — FR-001, FR-002, FR-035, FR-039.
-- [ ] T027 [US1] Implementar servicio de catálogo con CRUD/estado de categorías y unidades, activación/desactivación lógica de productos, If-Match, idempotencia y AuditEvent en `apps/api/src/modules/catalog/services/product.service.ts` — FR-004, FR-015, FR-016, FR-031, FR-033, FR-042.
-- [ ] T028 [US1] Implementar controller REST de productos/categorías/unidades en `apps/api/src/modules/catalog/catalog.controller.ts` conforme a `contracts/openapi.yaml` — FR-005, FR-023, FR-038, FR-039.
-- [ ] T029 [US1] Implementar serializadores por rol que omitan costos a seller en `apps/api/src/modules/catalog/dto/product-response.dto.ts` y añadir pruebas de regresión — FR-006, FR-036, SC-006.
+- [X] T026 [US1] Implementar DTOs estrictos y validadores de producto, categoría y unidad en `apps/api/src/modules/catalog/dto/product.dto.ts`, `category.dto.ts` y `unit.dto.ts`, con `ProductUpdateRequest` parcial, sin `tenantId` ni campos desconocidos — FR-001, FR-002, FR-035, FR-039.
+- [X] T027 [US1] Implementar servicio de catálogo con CRUD/estado de categorías y unidades, activación/desactivación lógica de productos, If-Match, idempotencia y AuditEvent en `apps/api/src/modules/catalog/services/product.service.ts` — FR-004, FR-015, FR-016, FR-031, FR-033, FR-042.
+- [X] T028 [US1] Implementar controller REST de productos/categorías/unidades en `apps/api/src/modules/catalog/catalog.controller.ts` conforme a `contracts/openapi.yaml` — FR-005, FR-023, FR-038, FR-039.
+- [X] T029 [US1] Implementar serializadores por rol que omitan costos a seller en `apps/api/src/modules/catalog/dto/product-response.dto.ts` y añadir pruebas de regresión — FR-006, FR-036, SC-006.
 - [ ] T030 [US1] Implementar únicamente la feature web de administración de productos, categorías, unidades y filtros en `apps/web/src/features/products/` — FR-023, FR-039.
 
 ## Phase 4: User Story 2 — Lotes e ingresos (Priority: P1)
