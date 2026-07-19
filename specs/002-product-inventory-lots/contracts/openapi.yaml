@@ -1,0 +1,1115 @@
+openapi: 3.1.0
+info:
+  title: BodegIA Product, Inventory and Lots API
+  version: 0.1.0
+  description: |
+    Contrato REST del núcleo OLTP tenant-scoped para productos, lotes, inventario,
+    FEFO y alertas. Ventas, clientes, OCR y BI no forman parte de este contrato.
+servers:
+  - url: /api/v1
+tags:
+  - name: Products
+  - name: Lots
+  - name: Inventory
+  - name: Alerts
+security:
+  - bearerAuth: []
+paths:
+  /tenants/current/categories:
+    get:
+      operationId: listCategories
+      tags: [Products]
+      summary: Listar categorías del tenant activo
+      x-permissions: [inventory.products.read]
+      x-roles: [owner_admin, inventory_manager, seller]
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - in: query
+          name: status
+          schema: { $ref: "#/components/schemas/CatalogStatus" }
+      responses:
+        "200":
+          description: Categorías visibles solo dentro del tenant activo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CategoryPage" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createCategory
+      tags: [Products]
+      summary: Crear categoría tenant-scoped
+      x-permissions: [inventory.products.write]
+      x-roles: [owner_admin, inventory_manager]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CategoryCreateRequest" }
+      responses:
+        "201":
+          description: Categoría creada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CategoryResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /tenants/current/categories/{categoryId}:
+    parameters:
+      - $ref: "#/components/parameters/CategoryId"
+    patch:
+      operationId: updateCategory
+      tags: [Products]
+      summary: Editar categoría del tenant activo
+      x-permissions: [inventory.products.write]
+      x-roles: [owner_admin, inventory_manager]
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CategoryUpdateRequest" }
+      responses:
+        "200":
+          description: Categoría actualizada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CategoryResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "412": { $ref: "#/components/responses/StaleState" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /tenants/current/categories/{categoryId}/status:
+    parameters:
+      - $ref: "#/components/parameters/CategoryId"
+    patch:
+      operationId: setCategoryStatus
+      tags: [Products]
+      summary: Activar o desactivar categoría
+      x-permissions: [inventory.products.write]
+      x-roles: [owner_admin, inventory_manager]
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CatalogStatusRequest" }
+      responses:
+        "200":
+          description: Estado de categoría actualizado y auditado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CategoryResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "412": { $ref: "#/components/responses/StaleState" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /tenants/current/units:
+    get:
+      operationId: listUnits
+      tags: [Products]
+      summary: Listar unidades del tenant activo
+      x-permissions: [inventory.products.read]
+      x-roles: [owner_admin, inventory_manager, seller]
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - in: query
+          name: status
+          schema: { $ref: "#/components/schemas/CatalogStatus" }
+      responses:
+        "200":
+          description: Unidades visibles solo dentro del tenant activo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnitPage" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createUnit
+      tags: [Products]
+      summary: Crear unidad tenant-scoped
+      x-permissions: [inventory.products.write]
+      x-roles: [owner_admin, inventory_manager]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UnitCreateRequest" }
+      responses:
+        "201":
+          description: Unidad creada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnitResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /tenants/current/units/{unitId}:
+    parameters:
+      - $ref: "#/components/parameters/UnitId"
+    patch:
+      operationId: updateUnit
+      tags: [Products]
+      summary: Editar unidad del tenant activo
+      x-permissions: [inventory.products.write]
+      x-roles: [owner_admin, inventory_manager]
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UnitUpdateRequest" }
+      responses:
+        "200":
+          description: Unidad actualizada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnitResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "412": { $ref: "#/components/responses/StaleState" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /tenants/current/units/{unitId}/status:
+    parameters:
+      - $ref: "#/components/parameters/UnitId"
+    patch:
+      operationId: setUnitStatus
+      tags: [Products]
+      summary: Activar o desactivar unidad
+      x-permissions: [inventory.products.write]
+      x-roles: [owner_admin, inventory_manager]
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CatalogStatusRequest" }
+      responses:
+        "200":
+          description: Estado de unidad actualizado y auditado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnitResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "412": { $ref: "#/components/responses/StaleState" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /tenants/current/products:
+    get:
+      operationId: listProducts
+      tags: [Products]
+      summary: Listar y buscar productos del tenant activo
+      x-permissions: [inventory.products.read]
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 120 }
+        - in: query
+          name: categoryId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: status
+          schema: { $ref: "#/components/schemas/ProductStatus" }
+        - in: query
+          name: lowStock
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Productos visibles para el tenant y rol actuales
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductPage" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    post:
+      operationId: createProduct
+      tags: [Products]
+      summary: Crear producto en el tenant activo
+      x-permissions: [inventory.products.write]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductCreateRequest" }
+      responses:
+        "201":
+          description: Producto creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /tenants/current/products/{productId}:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      operationId: getProduct
+      tags: [Products]
+      summary: Obtener un producto del tenant activo
+      x-permissions: [inventory.products.read]
+      responses:
+        "200":
+          description: Producto visible según rol
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: updateProduct
+      tags: [Products]
+      summary: Editar o cambiar estado de un producto
+      x-permissions: [inventory.products.write]
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductUpdateRequest" }
+      responses:
+        "200":
+          description: Producto actualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "412": { $ref: "#/components/responses/StaleState" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /tenants/current/products/{productId}/lots:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      operationId: listProductLots
+      tags: [Lots]
+      summary: Listar lotes de un producto
+      x-permissions: [inventory.lots.read]
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - in: query
+          name: includeExpired
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Lotes tenant-scoped
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LotPage" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createLotReceipt
+      tags: [Lots]
+      summary: Registrar ingreso de un lote
+      x-permissions: [inventory.lots.write]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LotCreateRequest" }
+      responses:
+        "201":
+          description: Lote y movimiento de ingreso creados atómicamente
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LotAdminResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /tenants/current/lots:
+    get:
+      operationId: listTenantLots
+      tags: [Lots]
+      summary: Listar lotes de todo el tenant activo
+      description: El orden es estable y el cursor queda ligado al tenant y a todos los filtros.
+      x-permissions: [inventory.lots.read]
+      x-roles: [owner_admin, inventory_manager, seller]
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - in: query
+          name: productId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: categoryId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: status
+          schema:
+            { type: string, enum: [AVAILABLE, DEPLETED, EXPIRED, INACTIVE] }
+        - in: query
+          name: expiresBefore
+          schema: { type: string, format: date }
+        - in: query
+          name: expiresAfter
+          schema: { type: string, format: date }
+        - in: query
+          name: expirationState
+          schema: { type: string, enum: [ACTIVE, EXPIRING_SOON, EXPIRED] }
+        - in: query
+          name: lowStock
+          schema: { type: boolean }
+        - in: query
+          name: stockState
+          schema: { type: string, enum: [IN_STOCK, LOW_STOCK, OUT_OF_STOCK] }
+      responses:
+        "200":
+          description: Lotes del tenant activo según la proyección autorizada por rol
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LotPage" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /tenants/current/lots/{lotId}:
+    parameters:
+      - $ref: "#/components/parameters/LotId"
+    get:
+      operationId: getLot
+      tags: [Lots]
+      summary: Obtener detalle de lote
+      x-permissions: [inventory.lots.read]
+      responses:
+        "200":
+          description: Lote visible según rol
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LotResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /tenants/current/inventory/balances:
+    get:
+      operationId: listInventoryBalances
+      tags: [Inventory]
+      summary: Consultar stock por producto y lote
+      x-permissions: [inventory.stock.read]
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - in: query
+          name: productId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: lowStock
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Saldos disponibles del tenant activo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InventoryBalancePage" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /tenants/current/inventory/movements:
+    get:
+      operationId: listInventoryMovements
+      tags: [Inventory]
+      summary: Consultar kardex tenant-scoped
+      x-permissions: [inventory.movements.read]
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - in: query
+          name: productId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: lotId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: type
+          schema: { $ref: "#/components/schemas/InventoryMovementType" }
+      responses:
+        "200":
+          description: Movimientos inmutables visibles según rol
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InventoryMovementPage" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createInventoryMovement
+      tags: [Inventory]
+      summary: Registrar movimiento de inventario
+      description: SALE_OUT solo prepara la integración de ventas futuras; no crea una venta.
+      x-permissions: [inventory.movements.write]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              { $ref: "#/components/schemas/InventoryMovementCreateRequest" }
+      responses:
+        "201":
+          description: Movimiento confirmado con saldo resultante
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InventoryMovementResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /tenants/current/inventory/fefo/suggestions:
+    get:
+      operationId: suggestFefoLots
+      tags: [Inventory]
+      summary: Sugerir lotes por FEFO
+      x-permissions: [inventory.stock.read]
+      parameters:
+        - in: query
+          name: productId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: quantity
+          required: true
+          schema: { type: number, exclusiveMinimum: 0 }
+      responses:
+        "200":
+          description: Lotes vigentes ordenados por vencimiento
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FefoSuggestionResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /tenants/current/inventory/alerts:
+    get:
+      operationId: listInventoryAlerts
+      tags: [Alerts]
+      summary: Listar alertas de inventario
+      x-permissions: [inventory.alerts.read]
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - in: query
+          name: type
+          schema: { $ref: "#/components/schemas/InventoryAlertType" }
+        - in: query
+          name: status
+          schema: { $ref: "#/components/schemas/InventoryAlertStatus" }
+        - in: query
+          name: categoryId
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Alertas del tenant activo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InventoryAlertPage" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /tenants/current/alerts/{alertId}/resolve:
+    patch:
+      operationId: resolveInventoryAlert
+      tags: [Alerts]
+      summary: Resolver una alerta del tenant activo
+      x-permissions: [inventory.alerts.write]
+      parameters:
+        - $ref: "#/components/parameters/AlertId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [RESOLVED]
+                reason:
+                  type: string
+                  maxLength: 240
+      responses:
+        "200":
+          description: Alerta resuelta y auditada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InventoryAlertResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque-session-token
+  parameters:
+    CategoryId:
+      in: path
+      name: categoryId
+      required: true
+      schema: { type: string, format: uuid }
+    UnitId:
+      in: path
+      name: unitId
+      required: true
+      schema: { type: string, format: uuid }
+    ProductId:
+      in: path
+      name: productId
+      required: true
+      schema: { type: string, format: uuid }
+    LotId:
+      in: path
+      name: lotId
+      required: true
+      schema: { type: string, format: uuid }
+    AlertId:
+      in: path
+      name: alertId
+      required: true
+      schema: { type: string, format: uuid }
+    Cursor:
+      in: query
+      name: cursor
+      schema: { type: string, minLength: 1, maxLength: 512 }
+    Limit:
+      in: query
+      name: limit
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 128 }
+    IfMatch:
+      in: header
+      name: If-Match
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 128 }
+  responses:
+    SessionInvalid:
+      description: Sesión ausente, expirada o revocada
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Forbidden:
+      description: Permiso insuficiente
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotFound:
+      description: Recurso inexistente o perteneciente a otro tenant
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Conflict:
+      description: Conflicto de idempotencia, stock, estado o unicidad
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    StaleState:
+      description: Versión desactualizada
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    ValidationError:
+      description: Entrada inválida
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+  schemas:
+    CatalogStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE]
+    CatalogStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/CatalogStatus" }
+    Category:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, name, status, version]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid, readOnly: true }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        status: { $ref: "#/components/schemas/CatalogStatus" }
+        version: { type: integer, minimum: 1, readOnly: true }
+        createdAt: { type: string, format: date-time, readOnly: true }
+        updatedAt: { type: string, format: date-time, readOnly: true }
+    CategoryCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+    CategoryUpdateRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+    CategoryResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: { $ref: "#/components/schemas/Category" }
+    CategoryPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Category" } }
+        nextCursor: { type: [string, "null"] }
+    UnitOfMeasure:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, code, name, quantityScale, status, version]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid, readOnly: true }
+        code: { type: string, minLength: 1, maxLength: 40 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        quantityScale: { type: integer, minimum: 0, maximum: 6 }
+        status: { $ref: "#/components/schemas/CatalogStatus" }
+        version: { type: integer, minimum: 1, readOnly: true }
+        createdAt: { type: string, format: date-time, readOnly: true }
+        updatedAt: { type: string, format: date-time, readOnly: true }
+    UnitCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [code, name, quantityScale]
+      properties:
+        code: { type: string, minLength: 1, maxLength: 40 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        quantityScale: { type: integer, minimum: 0, maximum: 6 }
+    UnitUpdateRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        code: { type: string, minLength: 1, maxLength: 40 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        quantityScale: { type: integer, minimum: 0, maximum: 6 }
+    UnitResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: { $ref: "#/components/schemas/UnitOfMeasure" }
+    UnitPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          { type: array, items: { $ref: "#/components/schemas/UnitOfMeasure" } }
+        nextCursor: { type: [string, "null"] }
+    ProductStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE]
+    Product:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          tenantId,
+          name,
+          unitOfMeasure,
+          status,
+          minimumStock,
+          expiryAlertDays,
+          version,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid, readOnly: true }
+        name: { type: string, minLength: 1, maxLength: 160 }
+        sku: { type: [string, "null"], maxLength: 80 }
+        barcode: { type: [string, "null"], maxLength: 80 }
+        category:
+          oneOf:
+            - { $ref: "#/components/schemas/CategoryRef" }
+            - { type: "null" }
+        unitOfMeasure: { $ref: "#/components/schemas/UnitRef" }
+        status: { $ref: "#/components/schemas/ProductStatus" }
+        minimumStock: { type: number, minimum: 0 }
+        expiryAlertDays: { type: integer, minimum: 0 }
+        availableStock: { type: number, minimum: 0, readOnly: true }
+        version: { type: integer, minimum: 1, readOnly: true }
+        createdAt: { type: string, format: date-time, readOnly: true }
+        updatedAt: { type: string, format: date-time, readOnly: true }
+    ProductCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [name, unitOfMeasureId]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 160 }
+        sku: { type: string, maxLength: 80 }
+        barcode: { type: string, maxLength: 80 }
+        categoryId: { type: string, format: uuid }
+        unitOfMeasureId: { type: string, format: uuid }
+        minimumStock: { type: number, minimum: 0, default: 0 }
+        expiryAlertDays: { type: integer, minimum: 0, default: 0 }
+    ProductUpdateRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 160 }
+        sku: { type: [string, "null"], maxLength: 80 }
+        barcode: { type: [string, "null"], maxLength: 80 }
+        categoryId: { type: [string, "null"], format: uuid }
+        unitOfMeasureId: { type: string, format: uuid }
+        minimumStock: { type: number, minimum: 0 }
+        expiryAlertDays: { type: integer, minimum: 0 }
+        status: { $ref: "#/components/schemas/ProductStatus" }
+    ProductResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: { $ref: "#/components/schemas/Product" }
+    CategoryRef:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+    UnitRef:
+      type: object
+      additionalProperties: false
+      required: [id, code, name, quantityScale]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        quantityScale: { type: integer, minimum: 0, maximum: 6 }
+    ProductPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Product" } }
+        nextCursor: { type: [string, "null"] }
+    LotOperational:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          tenantId,
+          productId,
+          expiresAt,
+          initialQuantity,
+          availableQuantity,
+          status,
+          version,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid, readOnly: true }
+        productId: { type: string, format: uuid }
+        receivedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date }
+        initialQuantity: { type: number, exclusiveMinimum: 0 }
+        availableQuantity: { type: number, minimum: 0 }
+        status: { type: string, enum: [AVAILABLE, DEPLETED, EXPIRED, INACTIVE] }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+    LotAdmin:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          tenantId,
+          productId,
+          expiresAt,
+          initialQuantity,
+          availableQuantity,
+          status,
+          version,
+          unitCost,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid, readOnly: true }
+        productId: { type: string, format: uuid }
+        receivedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date }
+        initialQuantity: { type: number, exclusiveMinimum: 0 }
+        availableQuantity: { type: number, minimum: 0 }
+        unitCost:
+          type: number
+          minimum: 0
+          x-visibility: [owner_admin, inventory_manager]
+        status: { type: string, enum: [AVAILABLE, DEPLETED, EXPIRED, INACTIVE] }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+    LotCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [receivedAt, expiresAt, initialQuantity, unitCost]
+      properties:
+        receivedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date }
+        initialQuantity: { type: number, exclusiveMinimum: 0 }
+        unitCost: { type: number, minimum: 0 }
+        reason: { type: string, maxLength: 240 }
+    LotResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          oneOf:
+            - $ref: "#/components/schemas/LotOperational"
+            - $ref: "#/components/schemas/LotAdmin"
+          description: La variante administrativa solo se devuelve a roles autorizados.
+    LotOperationalResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: { $ref: "#/components/schemas/LotOperational" }
+    LotAdminResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: { $ref: "#/components/schemas/LotAdmin" }
+    LotPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            oneOf:
+              - $ref: "#/components/schemas/LotOperational"
+              - $ref: "#/components/schemas/LotAdmin"
+        nextCursor: { type: [string, "null"] }
+    InventoryMovementType:
+      type: string
+      enum: [RECEIPT, POSITIVE_ADJUSTMENT, NEGATIVE_ADJUSTMENT, WASTE, SALE_OUT]
+    InventoryMovementCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [productId, lotId, type, quantity, reason]
+      properties:
+        productId: { type: string, format: uuid }
+        lotId: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/InventoryMovementType" }
+        quantity: { type: number, exclusiveMinimum: 0 }
+        reason: { type: string, minLength: 1, maxLength: 240 }
+        allowExpiredManualAdjustment: { type: boolean, default: false }
+    InventoryMovement:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          tenantId,
+          productId,
+          lotId,
+          type,
+          quantity,
+          quantityDelta,
+          balanceBefore,
+          balanceAfter,
+          createdAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid, readOnly: true }
+        productId: { type: string, format: uuid }
+        lotId: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/InventoryMovementType" }
+        quantity: { type: number, exclusiveMinimum: 0 }
+        quantityDelta: { type: number }
+        balanceBefore: { type: number, minimum: 0 }
+        balanceAfter: { type: number, minimum: 0 }
+        reason: { type: string }
+        actorId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+    InventoryMovementResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: { $ref: "#/components/schemas/InventoryMovement" }
+    InventoryMovementPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/InventoryMovement" },
+          }
+        nextCursor: { type: [string, "null"] }
+    InventoryBalanceOperational:
+      type: object
+      additionalProperties: false
+      required: [tenantId, productId, lotId, availableQuantity]
+      properties:
+        tenantId: { type: string, format: uuid, readOnly: true }
+        productId: { type: string, format: uuid }
+        lotId: { type: string, format: uuid }
+        availableQuantity: { type: number, minimum: 0 }
+    InventoryBalanceAdmin:
+      type: object
+      additionalProperties: false
+      required: [tenantId, productId, lotId, availableQuantity, unitCost]
+      properties:
+        tenantId: { type: string, format: uuid, readOnly: true }
+        productId: { type: string, format: uuid }
+        lotId: { type: string, format: uuid }
+        availableQuantity: { type: number, minimum: 0 }
+        unitCost:
+          type: number
+          minimum: 0
+          x-visibility: [owner_admin, inventory_manager]
+    InventoryBalance:
+      description: Variante operativa o administrativa según el rol autorizado.
+      oneOf:
+        - $ref: "#/components/schemas/InventoryBalanceOperational"
+        - $ref: "#/components/schemas/InventoryBalanceAdmin"
+    InventoryBalancePage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/InventoryBalance" },
+          }
+        nextCursor: { type: [string, "null"] }
+    FefoSuggestion:
+      type: object
+      additionalProperties: false
+      required: [lotId, expiresAt, availableQuantity, suggestedQuantity]
+      properties:
+        lotId: { type: string, format: uuid }
+        expiresAt: { type: string, format: date }
+        availableQuantity: { type: number, minimum: 0 }
+        suggestedQuantity: { type: number, exclusiveMinimum: 0 }
+    FefoSuggestionResponse:
+      type: object
+      additionalProperties: false
+      required: [productId, requestedQuantity, items, canFulfill]
+      properties:
+        productId: { type: string, format: uuid }
+        requestedQuantity: { type: number, exclusiveMinimum: 0 }
+        canFulfill: { type: boolean }
+        items:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/FefoSuggestion" },
+          }
+    InventoryAlertType:
+      type: string
+      enum: [LOW_STOCK, EXPIRING_SOON, EXPIRED]
+    InventoryAlertStatus:
+      type: string
+      enum: [ACTIVE, RESOLVED]
+    InventoryAlert:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, productId, type, status, triggeredAt]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid, readOnly: true }
+        productId: { type: string, format: uuid }
+        lotId: { type: [string, "null"], format: uuid }
+        type: { $ref: "#/components/schemas/InventoryAlertType" }
+        status: { $ref: "#/components/schemas/InventoryAlertStatus" }
+        observedValue: { type: number }
+        thresholdValue: { type: number }
+        triggeredAt: { type: string, format: date-time }
+        resolvedAt: { type: [string, "null"], format: date-time }
+    InventoryAlertResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: { $ref: "#/components/schemas/InventoryAlert" }
+    InventoryAlertPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/InventoryAlert" },
+          }
+        nextCursor: { type: [string, "null"] }
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, correlationId]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            correlationId: { type: string, format: uuid }
+            fields:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [field, message]
+                properties:
+                  field: { type: string }
+                  message: { type: string }
