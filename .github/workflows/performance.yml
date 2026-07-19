@@ -28,9 +28,9 @@ jobs:
     env:
       DATABASE_URL: postgresql://bodegia_test:bodegia_test@127.0.0.1:5432/bodegia_test?schema=public
       API_BASE_URL: http://127.0.0.1:3000
-      K6_DURATION: 30s
-      K6_RATE: "1"
-      K6_MAX_VUS: "10"
+      ACCESS_DURATION: 30s
+      ACCESS_RATE: "1"
+      ACCESS_MAX_VUS: "10"
       TEST_PHONE: ${{ secrets.BODEGIA_K6_PHONE }}
       TEST_PIN: ${{ secrets.BODEGIA_K6_PIN }}
       TEST_DEVICE_CREDENTIAL: ${{ secrets.BODEGIA_K6_DEVICE_CREDENTIAL }}

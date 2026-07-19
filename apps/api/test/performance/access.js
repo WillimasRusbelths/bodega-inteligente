@@ -6,12 +6,12 @@ import { Rate, Trend } from "k6/metrics";
 
 const operationDuration = new Trend("access_operation_duration", true);
 const operationFailures = new Rate("access_operation_failures");
-const baseUrl = requiredEnv("API_BASE_URL").replace(/\/$/u, "");
-const runDuration = __ENV.K6_DURATION ?? "30s";
-const requestRate = Number(__ENV.K6_RATE ?? "1");
+const baseUrl = requiredBaseUrl().replace(/\/$/u, "");
+const runDuration = __ENV.ACCESS_DURATION ?? "30s";
+const requestRate = Number(__ENV.ACCESS_RATE ?? "1");
 
 if (!Number.isFinite(requestRate) || requestRate <= 0) {
-  throw new Error("K6_RATE must be a positive number");
+  throw new Error("ACCESS_RATE must be a positive number");
 }
 
 export const options = {
@@ -40,6 +40,16 @@ function requiredEnv(name) {
   return value;
 }
 
+function requiredBaseUrl() {
+  const value = __ENV.API_BASE_URL ?? __ENV.BASE_URL;
+  if (value === undefined || value.length === 0) {
+    throw new Error(
+      "Missing required k6 environment variable: API_BASE_URL or BASE_URL",
+    );
+  }
+  return value;
+}
+
 function scenario(exec) {
   return {
     executor: "constant-arrival-rate",
@@ -47,7 +57,7 @@ function scenario(exec) {
     timeUnit: "1s",
     duration: runDuration,
     preAllocatedVUs: 1,
-    maxVUs: Number(__ENV.K6_MAX_VUS ?? "10"),
+    maxVUs: Number(__ENV.ACCESS_MAX_VUS ?? "10"),
     exec,
   };
 }
@@ -220,4 +230,8 @@ export function auditScenario() {
       200,
     );
   });
+}
+
+export default function () {
+  loginScenario();
 }
