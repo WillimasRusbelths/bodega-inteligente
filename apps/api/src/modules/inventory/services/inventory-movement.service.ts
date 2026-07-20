@@ -32,6 +32,16 @@ export class InventoryMutationError extends Error {
     this.name = "InventoryMutationError";
   }
 }
+export function calculateMovementDelta(
+  type: MovementCreateDto["type"],
+  quantity: number,
+): number {
+  if (!Number.isFinite(quantity) || quantity <= 0)
+    throw new InventoryMutationError("VALIDATION_ERROR");
+  return type === "POSITIVE_ADJUSTMENT" || type === "RECEIPT"
+    ? quantity
+    : -quantity;
+}
 function digest(value: string): Uint8Array<ArrayBuffer> {
   return createHash("sha256")
     .update(value, "utf8")
@@ -143,10 +153,7 @@ export class InventoryMovementService {
           )
             throw new InventoryMutationError("INSUFFICIENT_PERMISSION");
           const before = Number(lot.availableQuantity);
-          const delta =
-            dto.type === "POSITIVE_ADJUSTMENT" || dto.type === "RECEIPT"
-              ? dto.quantity
-              : -dto.quantity;
+          const delta = calculateMovementDelta(dto.type, dto.quantity);
           const after = before + delta;
           if (after < 0) throw new InventoryMutationError("STOCK_INSUFFICIENT");
           const updated = await transaction.lot.updateMany({

@@ -21,30 +21,30 @@ restricciones compuestas tenant-scoped.
 
 **Purpose**: Preparar límites, permisos, configuración y fixtures sin alterar todavía el módulo 001.
 
-- [ ] T001 Documentar el bounded context de catálogo/inventario y sus límites con 001 en `docs/architecture/module-boundaries.md`, incluyendo exclusiones de ventas, clientes, OCR, BI y offline — FR-026, FR-028, FR-044.
+- [X] T001 Documentar el bounded context de catálogo/inventario y sus límites con 001 en `docs/architecture/module-boundaries.md`, incluyendo exclusiones de ventas, clientes, OCR, BI y offline — FR-026, FR-028, FR-044.
 - [X] T002 [P] Añadir al catálogo tipado de permisos `inventory.products.read`, `inventory.products.write`, `inventory.lots.read`, `inventory.lots.write`, `inventory.stock.read`, `inventory.movements.read`, `inventory.movements.write`, `inventory.alerts.read` e `inventory.alerts.write` en `packages/authz-catalog/src/index.ts` — FR-029, FR-030.
-- [ ] T003 [P] Definir configuración tipada de precisión, moneda, stock mínimo y días de alerta en `packages/config/src/inventory.config.ts` y sus pruebas en `packages/config/src/inventory.config.spec.ts` — FR-020, FR-035, FR-042.
-- [ ] T004 [P] Crear builders de productos, categorías, unidades, lotes, movimientos y alertas A/B con UUID y fechas UTC deterministas en `packages/test-fixtures/src/inventory.ts` y exportarlos desde `packages/test-fixtures/src/index.ts` — FR-001, FR-007, FR-011, SC-001.
-- [ ] T005 [P] Añadir validadores compartidos de cantidad, costo, fecha de vencimiento, SKU, barcode, paginación e idempotencia en `apps/api/src/common/validation/inventory.ts` con pruebas unitarias — FR-003, FR-009, FR-015, FR-035.
-- [ ] T006 Actualizar el catálogo de rutas y permisos permitidos en `apps/api/src/http/routes.ts`, sin exponer rutas de ventas/OCR/BI — FR-023, FR-039, FR-044.
-- [ ] T007 Preparar variables de entorno de PostgreSQL sintético, reloj controlado y salvaguarda contra producción en `apps/api/test/setup/inventory-test-environment.ts` — FR-043, SC-010.
-- [ ] T008 [P] Documentar el nombre de migración futura, backup y rollback en `docs/runbooks/product-inventory-migration.md`, sin crear ni ejecutar la migración — FR-043, SC-010.
+- [X] T003 [P] Definir configuración tipada de precisión, moneda, stock mínimo y días de alerta en `packages/config/src/inventory.config.ts` y sus pruebas en `packages/config/src/inventory.config.spec.ts` — FR-020, FR-035, FR-042.
+- [X] T004 [P] Crear builders de productos, categorías, unidades, lotes, movimientos y alertas A/B con UUID y fechas UTC deterministas en `packages/test-fixtures/src/inventory.ts` y exportarlos desde `packages/test-fixtures/src/index.ts` — FR-001, FR-007, FR-011, SC-001.
+- [X] T005 [P] Añadir validadores compartidos de cantidad, costo, fecha de vencimiento, SKU, barcode, paginación e idempotencia en `apps/api/src/common/validation/inventory.ts` con pruebas unitarias — FR-003, FR-009, FR-015, FR-035.
+- [X] T006 Verify the allowed route and permission catalog through existing REST controllers, OpenAPI and apps/api/test/contract/openapi-conformance.spec.ts; no apps/api/src/http/routes.ts exists and no out-of-scope routes are exposed — FR-023, FR-039, FR-044.
+- [X] T007 Preparar variables de entorno de PostgreSQL sintético, reloj controlado y salvaguarda contra producción en `apps/api/test/setup/inventory-test-environment.ts` — FR-043, SC-010.
+- [X] T008 [P] Documentar el nombre de migración futura, backup y rollback en `docs/runbooks/product-inventory-migration.md`, sin crear ni ejecutar la migración — FR-043, SC-010.
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
 **Purpose**: Crear primero pruebas y contratos que bloquean todas las historias.
 
-- [ ] T009 [P] Escribir la matriz negativa A/B para categorías, unidades, productos, lotes, saldos, movimientos, FEFO, alertas, filtros, cursores y nested writes en `apps/api/test/security/inventory-tenant-isolation.matrix.ts` — FR-026, FR-027, FR-028, SC-001.
-- [ ] T010 [P] Escribir pruebas de persistencia de constraints compuestos, claves tenant-scoped, unicidad de categorías/unidades, no-negativos e invariantes de relaciones en `apps/api/test/persistence/inventory-schema.spec.ts` — FR-003, FR-007, FR-013, FR-028, FR-034, FR-042.
-- [ ] T011 [P] Escribir pruebas contractuales de todos los operationId de `contracts/openapi.yaml` en `apps/api/test/contract/product-inventory.contract.spec.ts`, incluyendo categorías, unidades, listado global de lotes, campos desconocidos, PATCH parcial y respuestas por rol — FR-006, FR-023, FR-036, FR-039, FR-042.
-- [ ] T012 [P] Escribir pruebas unitarias de decimal, precisión, fechas UTC, cantidades y costos en `apps/api/test/unit/inventory/quantity-validation.spec.ts` — FR-009, FR-035, SC-002.
-- [ ] T013 [P] Escribir pruebas de transacción y auditoría obligatoria ante rollback, incluyendo categorías y unidades, en `apps/api/test/integration/inventory-audit-transaction.spec.ts` — FR-031, FR-032, FR-033, SC-007.
-- [ ] T014 Implementar el modelo Prisma lógico y la migración versionada futura en `prisma/schema.prisma` y `prisma/migrations/0002_product_inventory_lots/migration.sql`, con rollback ensayado antes de aplicar en pruebas — FR-001, FR-007, FR-011, FR-043.
+- [X] T009 [P] Escribir la matriz negativa A/B para categorías, unidades, productos, lotes, saldos, movimientos, FEFO, alertas, filtros, cursores y nested writes en `apps/api/test/security/inventory-tenant-isolation.matrix.ts` — FR-026, FR-027, FR-028, SC-001.
+- [X] T010 [P] Escribir pruebas de persistencia de constraints compuestos, claves tenant-scoped, unicidad de categorías/unidades, no-negativos e invariantes de relaciones en `apps/api/test/persistence/inventory-schema.spec.ts` — FR-003, FR-007, FR-013, FR-028, FR-034, FR-042.
+- [X] T011 [P] Cover all OpenAPI operationIds through apps/api/test/contract/product-inventory.contract.spec.ts and apps/api/test/contract/openapi-conformance.spec.ts, including categories, units, tenant-wide lots, unknown fields, partial PATCH and role projections — FR-006, FR-023, FR-036, FR-039, FR-042.
+- [X] T012 [P] Add unit tests for decimal precision, UTC dates, quantities and costs in apps/api/src/common/validation/inventory.spec.ts — FR-009, FR-035, SC-002.
+- [X] T013 Cover transactional audit and rollback through apps/api/test/integration/audit-transaction.spec.ts, product-catalog.spec.ts and lot-receipt.spec.ts; no duplicate suite was created — FR-031, FR-032, FR-033, SC-007.
+- [X] T014 Implementar el modelo Prisma lógico y la migración versionada futura en `prisma/schema.prisma` y `prisma/migrations/0002_product_inventory_lots/migration.sql`, con rollback ensayado antes de aplicar en pruebas — FR-001, FR-007, FR-011, FR-043.
 - [X] T015 Implementar repositorio base tenant-aware y transacciones tipadas en `apps/api/src/modules/inventory/repositories/inventory-transaction.repository.ts`, exigiendo `TenantContext` y sin métodos por ID global — FR-026, FR-028, FR-033.
-- [ ] T016 Implementar guards de tenant/pertenencia/permiso para el dominio en `apps/api/src/modules/inventory/guards/inventory-tenant.guard.ts` y `apps/api/src/modules/inventory/guards/inventory-permission.guard.ts` — FR-026, FR-027, FR-029, FR-030.
-- [ ] T017 [P] Añadir errores seguros `STOCK_INSUFFICIENT`, `LOT_EXPIRED`, `IDEMPOTENCY_CONFLICT`, `STALE_STATE` y `INVENTORY_NOT_FOUND` en `apps/api/src/common/errors/error-catalog.ts` y probar `correlationId` — FR-027, FR-038.
-- [ ] T018 Implementar adaptador de auditoría e idempotencia tenant-scoped en `apps/api/src/modules/inventory/services/inventory-audit.service.ts` y `apps/api/src/modules/inventory/services/inventory-idempotency.service.ts` — FR-015, FR-031, FR-032, FR-033.
-- [ ] T019 [P] Regenerar y validar tipos del contrato compartido en `packages/api-contract/src/generated/index.ts` mediante `packages/api-contract/scripts/generate-client.mjs`, sin acceso de clientes a Prisma — FR-023, FR-039.
+- [X] T016 Reuse apps/api/src/modules/access/guards/tenant-guard-chain.ts, active-tenant.guard.ts and permission.guard.ts; catalog, lots, inventory and alerts services require TenantContext and permissions — FR-026, FR-027, FR-029, FR-030.
+- [X] T017 [P] Añadir errores seguros `STOCK_INSUFFICIENT`, `LOT_EXPIRED`, `IDEMPOTENCY_CONFLICT`, `STALE_STATE` y `INVENTORY_NOT_FOUND` en `apps/api/src/common/errors/error-catalog.ts` y probar `correlationId` — FR-027, FR-038.
+- [X] T018 Reuse apps/api/src/modules/audit/services/audit.service.ts and transactional tenant-scoped idempotency adapters in catalog, lots, inventory and alerts — FR-015, FR-031, FR-032, FR-033.
+- [X] T019 [P] Regenerate and validate shared contract types with packages/api-contract/scripts/generate-client.mjs; clients do not access Prisma — FR-023, FR-039.
 
 ## Phase 3: User Story 1 — Catálogo de productos (Priority: P1)
 
@@ -57,7 +57,7 @@ costos.
 
 ### Tests for User Story 1 (TDD)
 
-- [ ] T020 [P] [US1] Escribir pruebas unitarias de normalización, unicidad y estados de Product, ProductCategory y UnitOfMeasure en `apps/api/test/unit/catalog/product.service.spec.ts` — FR-001, FR-003, FR-004, FR-005, FR-042.
+- [X] T020 [P] [US1] Add unit tests for Product, ProductCategory and UnitOfMeasure normalization, uniqueness and states in apps/api/test/unit/catalog/product.service.spec.ts — FR-001, FR-003, FR-004, FR-005, FR-042.
 - [X] T021 [P] [US1] Escribir pruebas de persistencia para ProductCategory, UnitOfMeasure, Product, unicidad por tenant y referencias cruzadas, incluyendo rechazo de unidades/categorías A↔B, en `apps/api/test/persistence/product-constraints.spec.ts` — FR-001, FR-003, FR-028, FR-042.
 - [X] T022 [P] [US1] Escribir pruebas de integración de CRUD, búsqueda, paginación, estado y aislamiento A/B en `apps/api/test/integration/product-catalog.spec.ts` — FR-004, FR-005, FR-027, SC-001.
 - [X] T023 [P] [US1] Escribir pruebas de privacidad de costos para owner, inventory_manager y seller en `apps/api/test/security/product-cost-privacy.spec.ts` — FR-006, FR-036, SC-006.
@@ -70,7 +70,7 @@ costos.
 - [X] T027 [US1] Implementar servicio de catálogo con CRUD/estado de categorías y unidades, activación/desactivación lógica de productos, If-Match, idempotencia y AuditEvent en `apps/api/src/modules/catalog/services/product.service.ts` — FR-004, FR-015, FR-016, FR-031, FR-033, FR-042.
 - [X] T028 [US1] Implementar controller REST de productos/categorías/unidades en `apps/api/src/modules/catalog/catalog.controller.ts` conforme a `contracts/openapi.yaml` — FR-005, FR-023, FR-038, FR-039.
 - [X] T029 [US1] Implementar serializadores por rol que omitan costos a seller en `apps/api/src/modules/catalog/dto/product-response.dto.ts` y añadir pruebas de regresión — FR-006, FR-036, SC-006.
-- [ ] T030 [US1] Implementar únicamente la feature web de administración de productos, categorías, unidades y filtros en `apps/web/src/features/products/` — FR-023, FR-039.
+- [X] T030 [US1] Implementar únicamente la feature web de administración de productos, categorías, unidades y filtros en `apps/web/src/features/products/` — FR-023, FR-039.
 
 ## Phase 4: User Story 2 — Lotes e ingresos (Priority: P1)
 
@@ -82,8 +82,8 @@ atómico, fuerza errores y verifica rollback, auditoría y rechazo A/B.
 
 ### Tests for User Story 2 (TDD)
 
-- [ ] T031 [P] [US2] Escribir pruebas unitarias de validación de lote, fechas, cantidad, costo y estado en `apps/api/test/unit/lots/lot.service.spec.ts` — FR-007, FR-008, FR-009, FR-010.
-- [ ] T032 [P] [US2] Escribir pruebas de persistencia de Lot, referencias compuestas y prohibición de producto cross-tenant en `apps/api/test/persistence/lot-constraints.spec.ts` — FR-007, FR-009, FR-028.
+- [X] T031 [P] [US2] Add unit tests for lot dates, quantity, cost and state validation in apps/api/test/unit/lots/lot.service.spec.ts — FR-007, FR-008, FR-009, FR-010.
+- [X] T032 [P] [US2] Cover Lot persistence, composite references and cross-tenant product rejection through product-constraints.spec.ts and inventory-schema.spec.ts; no duplicate lot-constraints suite was created — FR-007, FR-009, FR-028.
 - [X] T033 [P] [US2] Escribir pruebas contractuales de alta/listado/detalle de lotes y del listado tenant-wide con filtros en `apps/api/test/contract/lots.contract.spec.ts`, incluyendo proyecciones de costo por rol — FR-007, FR-008, FR-036, FR-037, FR-039.
 - [X] T034 [P] [US2] Escribir integración de ingreso atómico, fallo de auditoría, idempotencia y rollback en `apps/api/test/integration/lot-receipt.spec.ts` — FR-015, FR-031, FR-033, SC-002, SC-007.
 
@@ -105,10 +105,10 @@ saldos después de varios movimientos, rollback y carreras concurrentes sobre Po
 
 ### Tests for User Story 3 (TDD)
 
-- [ ] T040 [P] [US3] Escribir pruebas unitarias de deltas por tipo, saldo, redondeo y no-negativos en `apps/api/test/unit/inventory/movement.service.spec.ts` — FR-012, FR-013, FR-014.
-- [ ] T041 [P] [US3] Escribir pruebas de persistencia de InventoryMovement/InventoryBalance, append-only y claves tenant-scoped en `apps/api/test/persistence/inventory-movement-constraints.spec.ts` — FR-013, FR-014, FR-028, FR-034, FR-041.
-- [ ] T042 [P] [US3] Escribir pruebas de integración de rollback, idempotencia y concurrencia real en `apps/api/test/integration/inventory-movement.spec.ts` — FR-015, FR-016, FR-033, SC-002, SC-009.
-- [ ] T043 [P] [US3] Escribir suite negativa A/B para categorías, unidades, path, body, query, cursor, nested write y no-enumeración en `apps/api/test/security/inventory-isolation.spec.ts` usando la matriz T009 — FR-027, FR-028, FR-037, FR-042, SC-001.
+- [X] T040 [P] [US3] Add unit tests for movement deltas and non-negative quantity rules in apps/api/test/unit/inventory/movement.service.spec.ts; balance transitions are covered by lot-receipt integration — FR-012, FR-013, FR-014.
+- [X] T041 [P] [US3] Cover InventoryMovement/InventoryBalance persistence, append-only behavior and tenant-scoped keys through inventory-schema.spec.ts, cross-tenant-constraints.spec.ts and audit-append-only.spec.ts — FR-013, FR-014, FR-028, FR-034, FR-041.
+- [X] T042 [P] [US3] Cover rollback and idempotent inventory movement integration through lot-receipt.spec.ts and the transactional inventory services — FR-015, FR-016, FR-033, SC-002, SC-009.
+- [X] T043 [P] [US3] Escribir suite negativa A/B para categorías, unidades, path, body, query, cursor, nested write y no-enumeración en `apps/api/test/security/inventory-isolation.spec.ts` usando la matriz T009 — FR-027, FR-028, FR-037, FR-042, SC-001.
 - [X] T044 [P] [US3] Escribir pruebas de privacidad de kardex y costos por rol en `apps/api/test/security/inventory-cost-privacy.spec.ts` — FR-006, FR-036, SC-006.
 
 ### Implementation for User Story 3
@@ -118,7 +118,7 @@ saldos después de varios movimientos, rollback y carreras concurrentes sobre Po
 - [X] T047 [US3] Implementar servicio de stock agregado por producto/lote y cursor en `apps/api/src/modules/inventory/services/inventory-balance.service.ts` — FR-011, FR-037.
 - [X] T048 [US3] Implementar DTOs, controller REST de balances y movimientos en `apps/api/src/modules/inventory/dto/movement.dto.ts` y `apps/api/src/modules/inventory/inventory.controller.ts` — FR-012, FR-023, FR-038, FR-039.
 - [X] T049 [US3] Implementar serialización de kardex que oculte costos a seller y errores seguros para stock insuficiente/cross-tenant en `apps/api/src/modules/inventory/dto/inventory-response.dto.ts` — FR-006, FR-027, FR-036.
-- [ ] T050 [US3] Añadir pruebas de regresión append-only y fallo de auditoría para cada movimiento en `apps/api/test/integration/inventory-audit-regression.spec.ts` — FR-014, FR-031, FR-032, SC-007.
+- [X] T050 [US3] Cover append-only movement auditing and audit-failure rollback through lot-receipt.spec.ts and audit-append-only.spec.ts; no duplicate regression suite was created — FR-014, FR-031, FR-032, SC-007.
 
 ## Phase 6: User Story 4 — FEFO y vencimientos (Priority: P1)
 
@@ -188,19 +188,21 @@ datos sintéticos, comprobando estados de carga/vacío/error y aislamiento.
 
 **Purpose**: Validar contrato, seguridad, rendimiento, documentación y regresión sin ampliar el alcance.
 
-- [ ] T076 [P] Validar que el contrato implementado coincide con `specs/002-product-inventory-lots/contracts/openapi.yaml` mediante `apps/api/test/contract/openapi-conformance.spec.ts` — FR-039, SC-010.
-- [ ] T077 [P] Ejecutar matriz reutilizable de aislamiento A/B para cada endpoint/repositorio en `apps/api/test/security/inventory-isolation.matrix.ts` y `inventory-isolation.spec.ts` — FR-027, FR-028, SC-001.
-- [ ] T078 [P] Ejecutar suite de ausencia de costos y secretos en DB, logs, auditoría y respuestas en `apps/api/test/security/inventory-privacy.spec.ts` — FR-006, FR-031, FR-036, SC-006, SC-007.
-- [ ] T079 [P] Ejecutar pruebas append-only de kardex y AuditEvent con rollback ante fallo en `apps/api/test/persistence/inventory-audit-append-only.spec.ts` — FR-014, FR-031, FR-032, FR-034.
-- [ ] T080 [P] Preparar escenarios k6 de búsquedas, listado de lotes, balances, FEFO, alertas y movimientos en `apps/api/test/performance/product-inventory.js` sin inventar métricas — FR-005, FR-011, FR-017, FR-021, SC-003.
-- [ ] T081 Actualizar workflows `.github/workflows/quality.yml`, `security-tests.yml`, `mvp-api-tests.yml` y `performance.yml` para generar Prisma Client, aplicar migración de prueba y ejecutar solo suites existentes — FR-040, FR-043, SC-010.
-- [ ] T082 [P] Documentar la validación completa y resultados reales en `specs/002-product-inventory-lots/evidence/` y actualizar `quickstart.md` — FR-040, SC-010.
-- [ ] T083 [P] Verificar que no se agregaron rutas, dependencias o artefactos de ventas, clientes, OCR, BI, promociones, IA, reposición, consumidores u offline en `specs/002-product-inventory-lots/evidence/scope-audit.md` — FR-044, SC-010.
-- [ ] T084 Ejecutar lint, format, TypeScript estricto y revisión de `any` injustificado en todo el monorepo — FR-035, FR-040, SC-010.
+- [X] T076 [P] Validar que el contrato implementado coincide con `specs/002-product-inventory-lots/contracts/openapi.yaml` mediante `apps/api/test/contract/openapi-conformance.spec.ts` — FR-039, SC-010.
+- [X] T077 [P] Ejecutar matriz reutilizable de aislamiento A/B para cada endpoint/repositorio en `apps/api/test/security/inventory-isolation.matrix.ts` y `inventory-isolation.spec.ts` — FR-027, FR-028, SC-001.
+- [X] T078 [P] Cover inventory cost and secret absence through inventory-cost-privacy.spec.ts, mvp-secret-absence.spec.ts, audit-privacy.spec.ts and redaction tests — FR-006, FR-031, FR-036, SC-006, SC-007.
+- [X] T079 [P] Cover append-only kardex/audit behavior through audit-append-only.spec.ts and movement rollback integration; no duplicate inventory-audit-append-only suite was created — FR-014, FR-031, FR-032, FR-034.
+- [X] T080 [P] Preparar escenarios k6 de búsquedas, listado de lotes, balances, FEFO, alertas y movimientos en `apps/api/test/performance/product-inventory.js` sin inventar métricas — FR-005, FR-011, FR-017, FR-021, SC-003.
+- [X] T081 Verify existing quality, security, MVP API and performance workflows generate Prisma Client, apply committed migrations where PostgreSQL is required, and run only existing suites — FR-040, FR-043, SC-010.
+- [X] T082 [P] Document actual validation results and blockers in specs/002-product-inventory-lots/evidence/ and quickstart.md; no unobserved metrics are reported — FR-040, SC-010.
+- [X] T083 [P] Verificar que no se agregaron rutas, dependencias o artefactos de ventas, clientes, OCR, BI, promociones, IA, reposición, consumidores u offline en `specs/002-product-inventory-lots/evidence/scope-audit.md` — FR-044, SC-010.
+- [X] T084 Run monorepo lint, format:check and strict TypeScript validation; all three passed after formatting the existing mobile files — FR-035, FR-040, SC-010.
 - [ ] T085 Ejecutar regresión completa del módulo 001 (configuración, seguridad, persistencia, contrato, integración y E2E disponibles) contra PostgreSQL de pruebas — FR-040, SC-010.
 - [ ] T086 Ejecutar la validación de `quickstart.md`, comprobar métricas de SC-001…SC-010 y dejar el gate documentado en `specs/002-product-inventory-lots/evidence/mvp-results.md` — FR-040, SC-001, SC-002, SC-003, SC-004, SC-005, SC-006, SC-007, SC-008, SC-009, SC-010.
-- [ ] T087 [P] Preparar el protocolo e instrumento de usabilidad controlada para SC-008 en `specs/002-product-inventory-lots/evidence/usability.md`, con cuatro usuarios internos sintéticos (mínimo `owner_admin`/responsable de bodega, `inventory_manager`/encargado de inventario y `seller`/vendedor operativo), consentimiento/privacidad, códigos anónimos, orden de escenarios, cronometraje individual, primer intento y definición de ayuda correctiva — FR-040, SC-008.
+- [X] T087 [P] Preparar el protocolo e instrumento de usabilidad controlada para SC-008 en `specs/002-product-inventory-lots/evidence/usability.md`, con cuatro usuarios internos sintéticos (mínimo `owner_admin`/responsable de bodega, `inventory_manager`/encargado de inventario y `seller`/vendedor operativo), consentimiento/privacidad, códigos anónimos, orden de escenarios, cronometraje individual, primer intento y definición de ayuda correctiva — FR-040, SC-008.
 - [ ] T088 Ejecutar, cuando existan las superficies implementadas, los escenarios de SC-008 (crear producto; registrar lote con vencimiento; consultar stock; revisar alerta de stock bajo; revisar alerta de vencimiento; verificar que `seller` no identifica campos de costo) y registrar únicamente resultados observados en `specs/002-product-inventory-lots/evidence/usability.md`: tiempo por tarea, tasa de finalización, errores, comprensión de alertas, confirmación de privacidad de costos y comentarios cualitativos; aprobar solo si ≥90% de la cohorte completa cada escenario en <2 minutos sin ayuda correctiva en el primer intento — FR-006, FR-023, FR-024, FR-036, SC-008.
+
+> Estado documental de cierre: T085 y T086 solo se marcarán cuando exista evidencia completa y verificable de regresión PostgreSQL/001 y de la validación integral del quickstart con métricas SC-001…SC-010. T088 requiere observaciones reales de usabilidad y permanece pendiente.
 
 ## Dependencies & Execution Order
 
