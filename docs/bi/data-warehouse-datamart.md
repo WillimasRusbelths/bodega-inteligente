@@ -67,3 +67,6 @@ para una evolucion posterior con consultas server-side directas al DataMart.
 Power BI o Tableau pueden conectarse posteriormente con un usuario de solo
 lectura limitado al schema `dw`. Esa integracion debe preservar tenant-scoping,
 privacidad de costos y no dar acceso directo desde web o movil a PostgreSQL.
+
+El roadmap de los DataMarts futuros esta documentado en
+`docs/roadmap/sistema-final-bodegia.md`.

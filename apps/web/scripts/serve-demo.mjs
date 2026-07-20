@@ -7,6 +7,7 @@ import { fileURLToPath, URL } from "node:url";
 
 const root = join(fileURLToPath(new URL("..", import.meta.url)));
 const port = Number.parseInt(process.env["PORT"] ?? "5173", 10);
+const host = process.env["HOST"] ?? "0.0.0.0";
 const mimeTypes = new Map([
   [".css", "text/css; charset=utf-8"],
   [".html", "text/html; charset=utf-8"],
@@ -51,6 +52,9 @@ const server = createServer((request, response) => {
   })();
 });
 
-server.listen(port, "127.0.0.1", () => {
+server.listen(port, host, () => {
   log(`BodegIA MVP demo available at http://127.0.0.1:${port}`);
+  if (host === "0.0.0.0") {
+    log(`For mobile access, open http://<laptop-lan-ip>:${port}`);
+  }
 });
