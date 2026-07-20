@@ -43,6 +43,7 @@ function product(
   unitOfMeasureId,
   minimumStock,
   expiryAlertDays,
+  salePrice,
 ) {
   return {
     id,
@@ -55,6 +56,7 @@ function product(
     unitOfMeasureId,
     minimumStock,
     expiryAlertDays,
+    salePrice,
     status: "ACTIVE",
   };
 }
@@ -136,6 +138,8 @@ async function main() {
       "inventory.movements.write",
       "inventory.alerts.read",
       "inventory.alerts.write",
+      "sales.read",
+      "sales.write",
     ];
     const permissions = new Map();
     for (const code of permissionCodes) {
@@ -162,6 +166,8 @@ async function main() {
       "inventory.stock.read",
       "inventory.movements.read",
       "inventory.alerts.read",
+      "sales.read",
+      "sales.write",
     ];
     await tx.rolePermission.createMany({
       data: adminPermissions.flatMap((code) =>
@@ -203,6 +209,8 @@ async function main() {
       });
     }
     await tx.inventoryAlert.deleteMany({ where: { tenantId: ids.tenant } });
+    await tx.saleItem.deleteMany({ where: { tenantId: ids.tenant } });
+    await tx.sale.deleteMany({ where: { tenantId: ids.tenant } });
     await tx.alertRule.deleteMany({ where: { tenantId: ids.tenant } });
     await tx.inventoryBalance.deleteMany({ where: { tenantId: ids.tenant } });
     await tx.inventoryMovement.deleteMany({ where: { tenantId: ids.tenant } });
@@ -245,6 +253,7 @@ async function main() {
         unitId["unidad"],
         10,
         14,
+        5.5,
       ),
       product(
         "00000000-0000-4000-8000-000000000402",
@@ -254,6 +263,7 @@ async function main() {
         unitId["botella"],
         30,
         10,
+        6.0,
       ),
       product(
         "00000000-0000-4000-8000-000000000403",
@@ -263,6 +273,7 @@ async function main() {
         unitId["paquete"],
         5,
         30,
+        22.0,
       ),
       product(
         "00000000-0000-4000-8000-000000000404",
@@ -272,6 +283,7 @@ async function main() {
         unitId["unidad"],
         8,
         0,
+        9.5,
       ),
       product(
         "00000000-0000-4000-8000-000000000405",
@@ -281,6 +293,7 @@ async function main() {
         unitId["unidad"],
         5,
         7,
+        8.0,
       ),
       product(
         "00000000-0000-4000-8000-000000000406",
@@ -290,6 +303,7 @@ async function main() {
         unitId["botella"],
         10,
         30,
+        12.0,
       ),
     ];
     for (const data of products) await tx.product.create({ data });

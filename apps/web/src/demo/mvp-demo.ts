@@ -50,6 +50,43 @@ export interface DemoWebSession {
   readonly employees?: readonly DemoEmployee[];
 }
 
+export interface QuickSaleProduct {
+  readonly id: string;
+  readonly name: string;
+  readonly sku: string | null;
+  readonly barcode: string | null;
+  readonly status: string;
+  readonly salePrice: number;
+  readonly availableStock: number;
+}
+
+export interface QuickSaleHistoryItem {
+  readonly id: string;
+  readonly productId: string;
+  readonly productName: string;
+  readonly lotId: string | null;
+  readonly expiresAt: string | null;
+  readonly quantity: number;
+  readonly unitPrice: number;
+  readonly lineTotal: number;
+}
+
+export interface QuickSaleRecord {
+  readonly id: string;
+  readonly saleNumber: string;
+  readonly status: string;
+  readonly subtotal: number;
+  readonly total: number;
+  readonly currency: string;
+  readonly createdAt: string;
+  readonly items: readonly QuickSaleHistoryItem[];
+}
+
+export interface QuickSalesDashboardData {
+  readonly products: readonly QuickSaleProduct[];
+  readonly sales: readonly QuickSaleRecord[];
+}
+
 export const demoCredentials: Record<
   InventoryWebRole,
   { readonly username: string; readonly pin: string }
@@ -90,6 +127,12 @@ function canSeeValuation(role: InventoryWebRole): boolean {
 
 function canManageTenant(role: InventoryWebRole): boolean {
   return role === "owner_admin";
+}
+
+function canSell(role: InventoryWebRole): boolean {
+  return (
+    role === "owner_admin" || role === "inventory_manager" || role === "seller"
+  );
 }
 
 function defaultSession(role: InventoryWebRole): DemoWebSession {
@@ -150,6 +193,30 @@ function defaultSession(role: InventoryWebRole): DemoWebSession {
         tenantId: "00000000-0000-4000-8000-000000000001",
       },
     ],
+  };
+}
+
+function defaultQuickSalesData(): QuickSalesDashboardData {
+  const data = createDemoInventoryData("owner_admin");
+  const prices = new Map<string, number>([
+    ["Leche evaporada", 5.5],
+    ["Gaseosa 1L", 6],
+    ["Arroz 5kg", 22],
+    ["Detergente 500g", 9.5],
+    ["Yogurt familiar", 8],
+    ["Aceite 1L", 12],
+  ]);
+  return {
+    products: data.products.map((product) => ({
+      id: product.id,
+      name: product.name,
+      sku: product.sku ?? null,
+      barcode: product.barcode ?? null,
+      status: product.status,
+      salePrice: prices.get(product.name) ?? 0,
+      availableStock: product.availableStock ?? 0,
+    })),
+    sales: [],
   };
 }
 
@@ -237,6 +304,7 @@ function renderSidebar(): string {
     ["#inicio", "Inicio"],
     ["#configuracion", "Configuracion de bodega"],
     ["#empleados", "Empleados y roles"],
+    ["#ventas", "Ventas rapidas"],
     ["#oltp", "Operacion OLTP"],
     ["#warehouse", "Data Warehouse"],
     ["#bi", "BI/OLAP"],
@@ -316,6 +384,65 @@ function renderEmployees(session: DemoWebSession): string {
     <div class="section-heading"><span class="eyebrow">Equipo</span><h2 id="empleados-title">Empleados y roles</h2><p>Empleados demo asociados a la bodega activa.</p></div>
     <div class="table-wrap"><table><thead><tr><th>Empleado</th><th>Rol</th><th>Estado</th><th>Bodega</th></tr></thead><tbody>${employeeRows(employees)}</tbody></table></div>
     <p class="permission-note">La creaci&oacute;n avanzada de empleados queda para el flujo administrativo completo; esta vista lista memberships reales del seed demo.</p>
+  </section>`;
+}
+
+function quickSaleProductOptions(
+  products: readonly QuickSaleProduct[],
+): string {
+  return products
+    .map(
+      (product) =>
+        `<option value="${escapeHtml(product.id)}" data-price="${product.salePrice}" data-stock="${product.availableStock}">${escapeHtml(product.name)} &middot; stock ${product.availableStock} &middot; ${money(product.salePrice)}</option>`,
+    )
+    .join("");
+}
+
+function quickSaleHistoryRows(sales: readonly QuickSaleRecord[]): string {
+  if (sales.length === 0) {
+    return `<tr><td colspan="5">Aun no hay ventas registradas en esta sesion demo.</td></tr>`;
+  }
+  return sales
+    .map((sale) => {
+      const productNames = [
+        ...new Set(sale.items.map((item) => item.productName)),
+      ].join(", ");
+      const quantity = sale.items.reduce((sum, item) => sum + item.quantity, 0);
+      return `<tr><td><strong>${escapeHtml(sale.saleNumber)}</strong><small>${escapeHtml(new Date(sale.createdAt).toLocaleString("es-PE"))}</small></td><td>${escapeHtml(productNames)}</td><td>${quantity}</td><td>${money(sale.total)}</td><td>${badge(sale.status)}</td></tr>`;
+    })
+    .join("");
+}
+
+function renderQuickSales(
+  session: DemoWebSession,
+  salesData: QuickSalesDashboardData,
+): string {
+  if (!canSell(session.membership.role)) {
+    return `<section id="ventas" class="panel locked-panel" aria-labelledby="ventas-title">
+      <div class="section-heading"><span class="eyebrow">Ventas</span><h2 id="ventas-title">Ventas r&aacute;pidas</h2><p>Tu rol actual no puede registrar ventas.</p></div>
+    </section>`;
+  }
+  const firstProduct = salesData.products[0];
+  return `<section id="ventas" class="panel" aria-labelledby="ventas-title">
+    <div class="section-heading"><span class="eyebrow">Ventas</span><h2 id="ventas-title">Ventas r&aacute;pidas</h2><p>Flujo MVP: seleccionar producto, cantidad, precio, descontar stock por FEFO y guardar historial.</p></div>
+    <div class="content-grid two-columns">
+      <article class="card">
+        <h3>Registrar venta</h3>
+        <form id="quick-sale-form" class="settings-form">
+          <label>Producto<select name="productId" id="quick-sale-product">${quickSaleProductOptions(salesData.products)}</select></label>
+          <label>Stock disponible<input id="quick-sale-stock" value="${firstProduct?.availableStock ?? 0}" readonly /></label>
+          <label>Cantidad<input name="quantity" id="quick-sale-quantity" type="number" min="1" step="1" value="1" /></label>
+          <label>Precio de venta<input name="unitPrice" id="quick-sale-price" type="number" min="0" step="0.01" value="${firstProduct?.salePrice ?? 0}" /></label>
+          <label>Total<input id="quick-sale-total" value="${money(firstProduct?.salePrice ?? 0)}" readonly /></label>
+          <button class="primary-action" type="submit">Registrar venta</button>
+          <p id="quick-sale-result" class="form-status" role="status"></p>
+        </form>
+      </article>
+      <article class="card">
+        <h3>Historial de ventas</h3>
+        <div class="table-wrap"><table><thead><tr><th>Venta</th><th>Producto</th><th>Cantidad</th><th>Total</th><th>Estado</th></tr></thead><tbody>${quickSaleHistoryRows(salesData.sales)}</tbody></table></div>
+      </article>
+    </div>
   </section>`;
 }
 
@@ -489,7 +616,7 @@ function renderRoadmap(): string {
     "Login productivo hardening",
     "Escaneo QR/codigo de barras",
     "OCR de vencimientos",
-    "Ventas rapidas",
+    "Ventas avanzadas y pagos complejos",
     "Clientes",
     "Proveedores",
     "Compras/reabastecimiento",
@@ -509,6 +636,7 @@ function renderRoadmap(): string {
 export function renderBodegiaDashboard(
   role: InventoryWebRole = "owner_admin",
   session: DemoWebSession = defaultSession(role),
+  salesData: QuickSalesDashboardData = defaultQuickSalesData(),
 ): string {
   const data = createDemoInventoryData(role);
   return `<div class="app-shell" data-testid="demo-dashboard" data-role="${role}" data-session="${escapeHtml(session.sessionId)}">
@@ -518,6 +646,7 @@ export function renderBodegiaDashboard(
       ${renderExecutiveSummary(data)}
       ${renderTenantSettings(session)}
       ${renderEmployees(session)}
+      ${renderQuickSales(session, salesData)}
       ${renderOltp(data)}
       ${renderWarehouse()}
       ${renderBi(data)}

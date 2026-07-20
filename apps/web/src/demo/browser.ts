@@ -5,6 +5,9 @@ import {
   type DemoEmployee,
   type DemoTenantSession,
   type DemoWebSession,
+  type QuickSaleProduct,
+  type QuickSaleRecord,
+  type QuickSalesDashboardData,
 } from "./mvp-demo.js";
 
 const roles = new Set<InventoryWebRole>([
@@ -88,6 +91,22 @@ async function loadEmployees(session: DemoWebSession): Promise<DemoWebSession> {
   return { ...session, employees };
 }
 
+async function loadSalesData(
+  session: DemoWebSession,
+): Promise<QuickSalesDashboardData> {
+  const [products, sales] = await Promise.all([
+    readApi<readonly QuickSaleProduct[]>(
+      "/tenants/current/products",
+      session.sessionId,
+    ),
+    readApi<readonly QuickSaleRecord[]>(
+      "/tenants/current/sales",
+      session.sessionId,
+    ),
+  ]);
+  return { products, sales };
+}
+
 function setLoginError(message: string): void {
   const error = document.querySelector<HTMLElement>("#login-error");
   if (error !== null) error.textContent = message;
@@ -118,7 +137,8 @@ async function login(role: InventoryWebRole): Promise<void> {
       "BODEGIA_DEMO_SESSION",
       session.sessionId,
     );
-    mountDashboard(await loadEmployees(session));
+    const sessionWithEmployees = await loadEmployees(session);
+    mountDashboard(sessionWithEmployees, await loadSalesData(session));
   } catch (error) {
     const suffix = error instanceof Error ? ` ${error.message}` : "";
     setLoginError(
@@ -195,7 +215,7 @@ function bindSettings(session: DemoWebSession): void {
           if (result !== null) {
             result.textContent = "Configuracion actualizada.";
           }
-          mountDashboard({ ...session, tenant });
+          void reloadDashboard({ ...session, tenant });
         })
         .catch((error: unknown) => {
           if (result !== null) {
@@ -213,10 +233,112 @@ function bindDashboard(session: DemoWebSession): void {
     .querySelector("#logout-demo-user")
     ?.addEventListener("click", () => void logout(session));
   bindSettings(session);
+  bindQuickSale(session);
 }
 
-function mountDashboard(session: DemoWebSession): void {
-  root().innerHTML = renderBodegiaDashboard(session.membership.role, session);
+function selectedQuickSaleOption(): HTMLOptionElement | null {
+  const select = document.querySelector<HTMLSelectElement>(
+    "#quick-sale-product",
+  );
+  return select?.selectedOptions.item(0) ?? null;
+}
+
+function updateQuickSaleTotal(): void {
+  const option = selectedQuickSaleOption();
+  const quantityInput = document.querySelector<HTMLInputElement>(
+    "#quick-sale-quantity",
+  );
+  const priceInput =
+    document.querySelector<HTMLInputElement>("#quick-sale-price");
+  const stockInput =
+    document.querySelector<HTMLInputElement>("#quick-sale-stock");
+  const totalInput =
+    document.querySelector<HTMLInputElement>("#quick-sale-total");
+  const price =
+    Number(priceInput?.value) || Number(option?.dataset["price"] ?? 0) || 0;
+  const quantity = Number(quantityInput?.value) || 0;
+  if (priceInput !== null && option !== null && priceInput.value.length === 0) {
+    priceInput.value = option.dataset["price"] ?? "0";
+  }
+  if (stockInput !== null) {
+    stockInput.value = option?.dataset["stock"] ?? "0";
+  }
+  if (totalInput !== null) {
+    totalInput.value = `S/ ${(price * quantity).toFixed(2)}`;
+  }
+}
+
+function bindQuickSale(session: DemoWebSession): void {
+  const product = document.querySelector<HTMLSelectElement>(
+    "#quick-sale-product",
+  );
+  const quantity = document.querySelector<HTMLInputElement>(
+    "#quick-sale-quantity",
+  );
+  const price = document.querySelector<HTMLInputElement>("#quick-sale-price");
+  product?.addEventListener("change", () => {
+    const option = selectedQuickSaleOption();
+    if (price !== null) price.value = option?.dataset["price"] ?? "0";
+    updateQuickSaleTotal();
+  });
+  quantity?.addEventListener("input", updateQuickSaleTotal);
+  price?.addEventListener("input", updateQuickSaleTotal);
+  updateQuickSaleTotal();
+
+  document
+    .querySelector<HTMLFormElement>("#quick-sale-form")
+    ?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      if (!(form instanceof HTMLFormElement)) return;
+      const result = document.querySelector<HTMLElement>("#quick-sale-result");
+      const data = new FormData(form);
+      void readApi<QuickSaleRecord>(
+        "/tenants/current/sales",
+        session.sessionId,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            items: [
+              {
+                productId: formText(data, "productId"),
+                quantity: Number(formText(data, "quantity")),
+                unitPrice: Number(formText(data, "unitPrice")),
+              },
+            ],
+          }),
+        },
+      )
+        .then((sale) => {
+          if (result !== null) {
+            result.textContent = `Venta ${sale.saleNumber} registrada.`;
+          }
+          void reloadDashboard(session);
+        })
+        .catch((error: unknown) => {
+          if (result !== null) {
+            result.textContent =
+              error instanceof Error
+                ? `No se pudo vender: ${error.message}`
+                : "No se pudo vender.";
+          }
+        });
+    });
+}
+
+async function reloadDashboard(session: DemoWebSession): Promise<void> {
+  mountDashboard(session, await loadSalesData(session));
+}
+
+function mountDashboard(
+  session: DemoWebSession,
+  salesData: QuickSalesDashboardData,
+): void {
+  root().innerHTML = renderBodegiaDashboard(
+    session.membership.role,
+    session,
+    salesData,
+  );
   bindDashboard(session);
 }
 
@@ -231,7 +353,8 @@ async function restoreSession(role: InventoryWebRole): Promise<void> {
       "/demo/auth/session",
       sessionId,
     );
-    mountDashboard(await loadEmployees(session));
+    const sessionWithEmployees = await loadEmployees(session);
+    mountDashboard(sessionWithEmployees, await loadSalesData(session));
   } catch {
     globalThis.sessionStorage.removeItem("BODEGIA_DEMO_SESSION");
     mountLogin(role);

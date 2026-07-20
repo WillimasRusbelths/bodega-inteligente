@@ -117,8 +117,15 @@ describe("MVP access unit regression [T119]", () => {
       "inventory.movements.write",
       "inventory.alerts.read",
       "inventory.alerts.write",
+      "sales.read",
+      "sales.write",
     ]);
-    expect(permissionsForRoles(["seller"])).toEqual(["inventory.stock.read"]);
+    expect(permissionsForRoles(["seller"])).toEqual([
+      "inventory.products.read",
+      "inventory.stock.read",
+      "sales.read",
+      "sales.write",
+    ]);
     expect(permissionsForRoles(["inventory_manager"])).toEqual([
       "inventory.alerts.read",
       "inventory.alerts.write",
@@ -130,6 +137,8 @@ describe("MVP access unit regression [T119]", () => {
       "inventory.products.write",
       "inventory.stock.adjust",
       "inventory.stock.read",
+      "sales.read",
+      "sales.write",
     ]);
     expect(permissionsForRoles(["owner_admin"])).toEqual([
       "access.audit.read",
@@ -147,6 +156,8 @@ describe("MVP access unit regression [T119]", () => {
       "inventory.products.write",
       "inventory.stock.adjust",
       "inventory.stock.read",
+      "sales.read",
+      "sales.write",
     ]);
     expect(permissionsForRoles(["seller", "inventory_manager"])).toEqual([
       "inventory.alerts.read",
@@ -159,10 +170,15 @@ describe("MVP access unit regression [T119]", () => {
       "inventory.products.write",
       "inventory.stock.adjust",
       "inventory.stock.read",
+      "sales.read",
+      "sales.write",
     ]);
     const sellerPermissions = permissionsForRoles(["seller"]);
     expect(
-      sellerPermissions.some((permission) => permission.endsWith(".write")),
+      sellerPermissions.some(
+        (permission) =>
+          permission.startsWith("inventory.") && permission.endsWith(".write"),
+      ),
     ).toBe(false);
     expect(
       sellerPermissions.some((permission) =>

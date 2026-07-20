@@ -29,6 +29,9 @@ Actualmente BodegIA tiene implementado el nucleo de inventario y BI operativo:
 - Configuracion MVP de bodega activa: nombre, ubicacion textual, moneda, horario
   referencial y estado.
 - Vista web MVP de empleados y roles para `owner_admin`.
+- Venta rapida MVP desde web con descuento de stock por FEFO.
+- Historial basico `Sale/SaleItem` y movimientos `SALE_OUT` en el kardex de
+  inventario.
 
 El unico DataMart implementado en el MVP actual es el DataMart de Inventario.
 Los demas DataMarts descritos abajo forman parte del roadmap del sistema final.
@@ -60,8 +63,9 @@ Las siguientes capacidades quedan registradas para fases posteriores:
 - APK Android.
 - Escaneo QR y codigo de barras.
 - OCR de fechas de vencimiento.
-- Ventas rapidas.
-- Calculo de vuelto.
+- Flujo de ventas completo: anulaciones, devoluciones, comprobantes y cierre de
+  caja.
+- Pagos complejos y calculo de vuelto.
 - Clientes.
 - Proveedores.
 - Compras y reabastecimiento.
@@ -74,8 +78,8 @@ Las siguientes capacidades quedan registradas para fases posteriores:
 
 ### DataMart de Ventas
 
-Objetivo: analizar ventas rapidas, volumen de operaciones, productos vendidos y
-comportamiento diario de la bodega.
+Objetivo: analizar el flujo de ventas completo, volumen de operaciones,
+productos vendidos, metodos de pago y comportamiento diario de la bodega.
 
 Dimensiones esperadas:
 
@@ -217,6 +221,8 @@ Indicadores BI esperados:
 ## Aclaracion importante
 
 El unico DataMart implementado en el MVP actual es el DataMart de Inventario.
-Los DataMarts de Ventas, Clientes, Compras/Reabastecimiento,
+La venta rapida MVP impacta ese DataMart indirectamente mediante movimientos
+`SALE_OUT`, pero el DataMart de Ventas todavia no esta implementado. Los
+DataMarts de Ventas, Clientes, Compras/Reabastecimiento,
 Financiero/Rentabilidad y Promociones/Precios son roadmap del sistema final. No
 deben presentarse como funcionalidades ya implementadas.
