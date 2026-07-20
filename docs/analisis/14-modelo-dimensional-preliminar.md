@@ -109,9 +109,9 @@ flowchart TB
 ## Matriz bus
 
 | Proceso / DataMart | Tiempo | Bodega | Producto | Categoría | Cliente | Usuario | Lote | Modalidad de venta | Promoción | Tipo de movimiento | Motivo | Unidad de medida |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Ventas | X | X | X | X | X | X | X | X | X |  |  |  |
-| Inventario | X | X | X |  |  | X | X |  |  | X | X | X |
+| ------------------ | ------ | ------ | -------- | --------- | ------- | ------- | ---- | ------------------ | --------- | ------------------ | ------ | ---------------- |
+| Ventas             | X      | X      | X        | X         | X       | X       | X    | X                  | X         |                    |        |                  |
+| Inventario         | X      | X      | X        |           |         | X       | X    |                    |           | X                  | X      | X                |
 
 ## Dimensiones conformadas
 

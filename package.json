@@ -19,7 +19,8 @@
     "test:security": "vitest run apps/api/test/security --pool=threads --maxWorkers=1",
     "test:e2e:web": "playwright test apps/web/e2e/access-admin.spec.ts",
     "test:e2e:mobile": "maestro test apps/mobile/e2e",
-    "test:performance": "k6 run apps/api/test/performance/access.js"
+    "test:performance": "k6 run apps/api/test/performance/access.js",
+    "seed:demo": "node scripts/seed-demo.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",

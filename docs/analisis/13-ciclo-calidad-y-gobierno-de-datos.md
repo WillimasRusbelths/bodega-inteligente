@@ -26,18 +26,18 @@
 
 ## Controles de calidad
 
-| Caso | Control conceptual | Tratamiento |
-|---|---|---|
-| Códigos duplicados | Detectar misma clave comercial dentro del tenant y variantes conflictivas | Cuarentena o resolución autorizada; no fusionar automáticamente |
-| Fechas inválidas | Validar formato, rango y confirmación OCR | Rechazar o corregir en OLTP mediante proceso autorizado |
-| Cantidades negativas | Admitir signo solo cuando el tipo de movimiento lo justifique | Rechazar registro incoherente y conservar error |
-| Ventas sin detalle | Exigir al menos un detalle íntegro para una venta confirmada | Cuarentena y conciliación con fuente |
-| Lotes sin producto | Validar relación producto-lote dentro del mismo tenant | Rechazar carga del hecho dependiente |
-| Clientes duplicados por teléfono | Buscar coincidencias dentro de la bodega sin cruzar tenants | Marcar para revisión; no fusionar identidades automáticamente |
-| Unidades incompatibles | Contrastar modalidad, unidad base y tipo de medida | Rechazar transformación incompatible |
-| Importes y costos inconsistentes | Conciliar bruto, descuento, neto, costo y margen según definición | Cuarentena o marca de calidad; no alterar OLTP |
-| Venta por importe no medida | Exigir importe y lote; cantidad física debe permanecer ausente | Cargar importe y indicador de no medición, sin imputar cantidad |
-| Tenants diferentes | Comparar tenant de venta, detalle, producto, lote y dimensiones | Rechazo crítico y alerta de seguridad/calidad |
+| Caso                             | Control conceptual                                                        | Tratamiento                                                     |
+| -------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Códigos duplicados               | Detectar misma clave comercial dentro del tenant y variantes conflictivas | Cuarentena o resolución autorizada; no fusionar automáticamente |
+| Fechas inválidas                 | Validar formato, rango y confirmación OCR                                 | Rechazar o corregir en OLTP mediante proceso autorizado         |
+| Cantidades negativas             | Admitir signo solo cuando el tipo de movimiento lo justifique             | Rechazar registro incoherente y conservar error                 |
+| Ventas sin detalle               | Exigir al menos un detalle íntegro para una venta confirmada              | Cuarentena y conciliación con fuente                            |
+| Lotes sin producto               | Validar relación producto-lote dentro del mismo tenant                    | Rechazar carga del hecho dependiente                            |
+| Clientes duplicados por teléfono | Buscar coincidencias dentro de la bodega sin cruzar tenants               | Marcar para revisión; no fusionar identidades automáticamente   |
+| Unidades incompatibles           | Contrastar modalidad, unidad base y tipo de medida                        | Rechazar transformación incompatible                            |
+| Importes y costos inconsistentes | Conciliar bruto, descuento, neto, costo y margen según definición         | Cuarentena o marca de calidad; no alterar OLTP                  |
+| Venta por importe no medida      | Exigir importe y lote; cantidad física debe permanecer ausente            | Cargar importe y indicador de no medición, sin imputar cantidad |
+| Tenants diferentes               | Comparar tenant de venta, detalle, producto, lote y dimensiones           | Rechazo crítico y alerta de seguridad/calidad                   |
 
 ## Perfiles de datos y umbrales
 

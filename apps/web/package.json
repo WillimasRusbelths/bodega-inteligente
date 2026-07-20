@@ -7,6 +7,10 @@
     "@bodegia/api-contract": "workspace:*"
   },
   "scripts": {
+    "build": "tsc",
+    "dev": "corepack pnpm build && node scripts/serve-demo.mjs",
+    "preview": "node scripts/serve-demo.mjs",
+    "start": "node scripts/serve-demo.mjs",
     "test": "corepack pnpm --dir ../.. exec vitest run apps/web/test --pool=threads --maxWorkers=1",
     "typecheck": "tsc --noEmit"
   }

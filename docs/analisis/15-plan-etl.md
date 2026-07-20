@@ -99,24 +99,24 @@ de conciliación se calculan también por tenant.
 
 ## Matriz conceptual de transformación
 
-| Campo o dato fuente | Regla de transformación | Destino dimensional | Control de calidad | Tratamiento de error |
-|---|---|---|---|---|
-| Fecha/hora de venta | Normalizar zona y derivar calendario | DimTiempo / FactVentas | Fecha válida y venta confirmada | Cuarentena |
-| Bodega de la operación | Resolver tenant autorizado | DimBodega y todos los hechos | Coincidencia en relaciones | Rechazo crítico |
-| Producto y presentación | Conformar identidad histórica | DimProducto | Código/clave únicos por tenant | Revisión, sin fusión automática |
-| Categoría | Resolver versión aplicable | DimCategoria | Categoría existente en tenant | Miembro desconocido solo si se aprueba |
-| Cliente | Resolver identificado o Cliente general | DimCliente | Datos mínimos y tenant coherente | Cuarentena o miembro general según fuente real |
-| Usuario vendedor | Resolver pertenencia aplicable | DimUsuarioVendedor | Pertenencia coherente al momento | Cuarentena |
-| Lote consumido | Resolver lote del producto y tenant | DimLote / FactVentas | Producto, lote y tenant coinciden | Rechazo crítico |
-| Modalidad de venta | Normalizar unidad/peso/importe | DimModalidadVenta | Compatible con producto | Cuarentena |
-| Cantidad vendida | Conservar medida real; ausente si no medida | FactVentas | No negativa y unidad compatible | Rechazo; no imputar |
-| Bruto, descuento y neto | Aplicar fórmula versionada preliminar | FactVentas | Conciliación monetaria | Cuarentena o marca de calidad |
-| Costo y margen | Atribuir costo y clasificar estado | FactVentas | Costo trazable; estimado/definitivo | No publicar margen no sustentado |
-| Tipo de movimiento | Normalizar catálogo autorizado | DimTipoMovimiento | Tipo válido | Cuarentena |
-| Cantidades de movimiento | Separar entrada, salida y merma | FactMovimientosInventario | Signo y unidad compatibles | Rechazo |
-| Stock anterior/posterior | Conservar valores operacionales medidos | FactMovimientosInventario | Conciliación con movimiento | Incidencia y cuarentena |
-| Motivo | Resolver motivo aprobado | DimMotivo | Obligatorio cuando aplique | Cuarentena |
-| Unidad de medida | Conformar unidad real | DimUnidadMedida | Compatible con modalidad | Rechazo |
+| Campo o dato fuente      | Regla de transformación                     | Destino dimensional          | Control de calidad                  | Tratamiento de error                           |
+| ------------------------ | ------------------------------------------- | ---------------------------- | ----------------------------------- | ---------------------------------------------- |
+| Fecha/hora de venta      | Normalizar zona y derivar calendario        | DimTiempo / FactVentas       | Fecha válida y venta confirmada     | Cuarentena                                     |
+| Bodega de la operación   | Resolver tenant autorizado                  | DimBodega y todos los hechos | Coincidencia en relaciones          | Rechazo crítico                                |
+| Producto y presentación  | Conformar identidad histórica               | DimProducto                  | Código/clave únicos por tenant      | Revisión, sin fusión automática                |
+| Categoría                | Resolver versión aplicable                  | DimCategoria                 | Categoría existente en tenant       | Miembro desconocido solo si se aprueba         |
+| Cliente                  | Resolver identificado o Cliente general     | DimCliente                   | Datos mínimos y tenant coherente    | Cuarentena o miembro general según fuente real |
+| Usuario vendedor         | Resolver pertenencia aplicable              | DimUsuarioVendedor           | Pertenencia coherente al momento    | Cuarentena                                     |
+| Lote consumido           | Resolver lote del producto y tenant         | DimLote / FactVentas         | Producto, lote y tenant coinciden   | Rechazo crítico                                |
+| Modalidad de venta       | Normalizar unidad/peso/importe              | DimModalidadVenta            | Compatible con producto             | Cuarentena                                     |
+| Cantidad vendida         | Conservar medida real; ausente si no medida | FactVentas                   | No negativa y unidad compatible     | Rechazo; no imputar                            |
+| Bruto, descuento y neto  | Aplicar fórmula versionada preliminar       | FactVentas                   | Conciliación monetaria              | Cuarentena o marca de calidad                  |
+| Costo y margen           | Atribuir costo y clasificar estado          | FactVentas                   | Costo trazable; estimado/definitivo | No publicar margen no sustentado               |
+| Tipo de movimiento       | Normalizar catálogo autorizado              | DimTipoMovimiento            | Tipo válido                         | Cuarentena                                     |
+| Cantidades de movimiento | Separar entrada, salida y merma             | FactMovimientosInventario    | Signo y unidad compatibles          | Rechazo                                        |
+| Stock anterior/posterior | Conservar valores operacionales medidos     | FactMovimientosInventario    | Conciliación con movimiento         | Incidencia y cuarentena                        |
+| Motivo                   | Resolver motivo aprobado                    | DimMotivo                    | Obligatorio cuando aplique          | Cuarentena                                     |
+| Unidad de medida         | Conformar unidad real                       | DimUnidadMedida              | Compatible con modalidad            | Rechazo                                        |
 
 ## Pruebas ETL
 

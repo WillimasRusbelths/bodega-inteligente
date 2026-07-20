@@ -72,9 +72,7 @@ activa, tenant y permisos. La información resultante permanece asociada a la bo
 - **Actores:** Responsable de inventario; proveedor como participante externo.
 - **Precondiciones:** Producto configurado y usuario autorizado.
 - **Disparador:** Recepción de mercadería contada o medida.
-- **Flujo principal:** 1. Seleccionar producto. 2. Registrar presentación de compra, proveedor y costo.
-  3. Contar unidades o ingresar peso medido. 4. Registrar lote y vencimiento aplicable. 5. Confirmar.
-  6. Crear entrada y auditoría.
+- **Flujo principal:** 1. Seleccionar producto. 2. Registrar presentación de compra, proveedor y costo. 3. Contar unidades o ingresar peso medido. 4. Registrar lote y vencimiento aplicable. 5. Confirmar. 6. Crear entrada y auditoría.
 - **Flujos alternativos:** Compra por caja, costal o jaba convertida a cantidad aprovechable real.
 - **Excepciones:** Cantidad diferente a la esperada, fecha inválida o error OCR.
 - **Información de entrada:** Costo total, cantidad aprovechable, proveedor, lote y vencimiento.
@@ -93,8 +91,7 @@ activa, tenant y permisos. La información resultante permanece asociada a la bo
 - **Precondiciones:** Producto configurado para control aproximado.
 - **Disparador:** Recepción de un lote cuyo peso o volumen no fue medido.
 - **Flujo principal:** 1. Seleccionar producto. 2. Registrar recipiente o atado, costo y proveedor. 3.
-  Registrar vencimiento si aplica. 4. Asignar estado aproximado inicial aprobado. 5. Confirmar entrada.
-  6. Auditar.
+  Registrar vencimiento si aplica. 4. Asignar estado aproximado inicial aprobado. 5. Confirmar entrada. 6. Auditar.
 - **Flujos alternativos:** Producto fresco, molido o preparado adquirido como un único lote.
 - **Excepciones:** Intento de registrar gramos, volumen o porciones no medidos.
 - **Información de entrada:** Producto, costo, presentación, estado aproximado y vencimiento aplicable.
@@ -402,8 +399,7 @@ activa, tenant y permisos. La información resultante permanece asociada a la bo
 - **Actores:** Administrador técnico analítico; investigador o analista BI; responsable de calidad.
 - **Precondiciones:** Fuentes autorizadas, ambiente separado, punto de corte y credenciales de solo lectura.
 - **Disparador:** Ejecución programada o manual controlada de ETL.
-- **Flujo principal:** 1. Registrar ejecución y corte. 2. Extraer cambios por tenant. 3. Cargar staging.
-  4. Validar, limpiar y conformar. 5. Poner inválidos en cuarentena. 6. Cargar dimensiones y hechos. 7.
+- **Flujo principal:** 1. Registrar ejecución y corte. 2. Extraer cambios por tenant. 3. Cargar staging. 4. Validar, limpiar y conformar. 5. Poner inválidos en cuarentena. 6. Cargar dimensiones y hechos. 7.
   Actualizar DataMarts de Ventas e Inventario. 8. Conciliar y publicar. 9. Cerrar auditoría ETL.
 - **Flujos alternativos:** Reprocesar intervalo o cuarentena de forma idempotente.
 - **Excepciones:** Fallo ETL, duplicado, dimensión desconocida, tenant incorrecto o carga parcial.
@@ -444,8 +440,7 @@ activa, tenant y permisos. La información resultante permanece asociada a la bo
   investigador o analista BI; administrador técnico solo para operación técnica.
 - **Precondiciones:** Dashboard posterior publicado, usuario autorizado y corte analítico disponible.
 - **Disparador:** Usuario abre o actualiza un reporte.
-- **Flujo principal:** 1. Autenticar. 2. Resolver pertenencia y tenant. 3. Aplicar seguridad autoritativa.
-  4. Cargar indicadores del DataMart. 5. Mostrar filtros, fecha de actualización y limitaciones. 6.
+- **Flujo principal:** 1. Autenticar. 2. Resolver pertenencia y tenant. 3. Aplicar seguridad autoritativa. 4. Cargar indicadores del DataMart. 5. Mostrar filtros, fecha de actualización y limitaciones. 6.
   Permitir consulta sin modificación operacional.
 - **Flujos alternativos:** Mostrar estado sin datos o alerta de dashboard desactualizado.
 - **Excepciones:** Intento de otro tenant, DataMart no conciliado o métrica insuficiente.

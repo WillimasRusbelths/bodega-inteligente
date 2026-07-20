@@ -161,5 +161,4 @@ promociones y vencimientos como base para evaluar una etapa predictiva posterior
 Quedan fuera del MVP obligatorio la predicción de demanda y reposición, las recomendaciones
 aprendidas de precios y promociones, la detección de operaciones anómalas mediante machine learning
 y el entrenamiento con información histórica de cada bodega. Cualquier evolución futura deberá
-respetar el aislamiento multi-tenant, la privacidad y la autorización para usar los datos.
-10. ¿Cómo medir el resultado del MVP sin inventar una línea base ni metas no validadas?
+respetar el aislamiento multi-tenant, la privacidad y la autorización para usar los datos. 10. ¿Cómo medir el resultado del MVP sin inventar una línea base ni metas no validadas?
