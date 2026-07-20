@@ -80,6 +80,117 @@ function parsePort(value: string | undefined): number {
   return port;
 }
 
+function redactSensitiveText(value: string): string {
+  const databaseUrl = process.env["DATABASE_URL"];
+  const withoutDatabaseUrl =
+    databaseUrl === undefined || databaseUrl.length === 0
+      ? value
+      : value.split(databaseUrl).join("[DATABASE_URL]");
+  return withoutDatabaseUrl
+    .replace(
+      /\bpostgres(?:ql)?:\/\/[^\s/@]+:[^\s/@]+@/giu,
+      "postgresql://[REDACTED]@",
+    )
+    .replace(
+      /\b(password|token|secret|authorization)=([^&\s]+)/giu,
+      "$1=[REDACTED]",
+    )
+    .replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gu, "$1 [REDACTED]");
+}
+
+function errorName(error: unknown): string {
+  return error instanceof Error ? error.name : typeof error;
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return redactSensitiveText(error.message);
+  if (typeof error === "string") return redactSensitiveText(error);
+  return "Unknown non-error throw";
+}
+
+function errorStackFirstLine(error: unknown): string | undefined {
+  if (!(error instanceof Error) || error.stack === undefined) return undefined;
+  const firstLine = error.stack.split(/\r?\n/u).at(0);
+  return firstLine === undefined ? undefined : redactSensitiveText(firstLine);
+}
+
+function prismaErrorCode(error: unknown): string | undefined {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+  ) {
+    return error.code;
+  }
+  return undefined;
+}
+
+function requestPath(request: IncomingMessage): string {
+  try {
+    return new URL(request.url ?? "/", "http://localhost").pathname;
+  } catch {
+    return "[INVALID_URL]";
+  }
+}
+
+function maskDatabaseHost(hostname: string): string {
+  const labels = hostname.split(".").filter((label) => label.length > 0);
+  if (labels.length === 0) return "[unknown-host]";
+  const first = labels[0] ?? "";
+  const maskedFirst =
+    first.length <= 3 ? `${first.at(0) ?? ""}***` : `${first.slice(0, 3)}***`;
+  return labels.length >= 3
+    ? [maskedFirst, ...labels.slice(-2)].join(".")
+    : maskedFirst;
+}
+
+function databaseHostMasked(): string | undefined {
+  const databaseUrl = process.env["DATABASE_URL"];
+  if (databaseUrl === undefined || databaseUrl.length === 0) return undefined;
+  try {
+    return maskDatabaseHost(new URL(databaseUrl).hostname);
+  } catch {
+    return "[invalid-database-url]";
+  }
+}
+
+function logInternalServerError(
+  request: IncomingMessage,
+  correlationId: string,
+  status: number,
+  error: unknown,
+): void {
+  if (status < 500) return;
+  globalThis.console.error(
+    JSON.stringify({
+      event: "api_internal_error",
+      correlationId,
+      method: request.method ?? "[UNKNOWN_METHOD]",
+      url: requestPath(request),
+      status,
+      errorName: errorName(error),
+      errorMessage: errorMessage(error),
+      prismaCode: prismaErrorCode(error),
+      stackFirstLine: errorStackFirstLine(error),
+    }),
+  );
+}
+
+function logStartup(port: number): void {
+  globalThis.console.info(
+    JSON.stringify({
+      event: "api_startup",
+      nodeEnv: process.env["NODE_ENV"] ?? "development",
+      appEnv: process.env["APP_ENV"] ?? null,
+      demoAuthEnabled: process.env["DEMO_AUTH_ENABLED"] === "true",
+      databaseUrlConfigured: process.env["DATABASE_URL"] !== undefined,
+      databaseHostMasked: databaseHostMasked() ?? null,
+      port,
+    }),
+  );
+}
+
 const DEMO_TENANT_ID = "00000000-0000-4000-8000-000000000001";
 const DEMO_USERS = Object.freeze({
   owner_admin: "00000000-0000-4000-8000-000000000011",
@@ -691,6 +802,7 @@ export function createApiServer() {
       })
       .catch((error: unknown) => {
         const status = statusFromError(error);
+        logInternalServerError(request, id, status, error);
         jsonResponse(response, status, {
           error: {
             code: codeFromError(error, status),
@@ -710,6 +822,7 @@ function start(): void {
   const server = createApiServer();
   const port = parsePort(process.env["PORT"]);
   server.listen(port, "0.0.0.0", () => {
+    logStartup(port);
     process.stdout.write(`API test server listening on port ${port}\n`);
   });
 
