@@ -24,6 +24,18 @@ export const errorCatalog = {
     status: 409,
     message: "The available stock is insufficient.",
   },
+  LOT_EXPIRED: {
+    status: 409,
+    message: "The lot is not available for the requested operation.",
+  },
+  IDEMPOTENCY_CONFLICT: {
+    status: 409,
+    message: "The request conflicts with a previous operation.",
+  },
+  INVENTORY_NOT_FOUND: {
+    status: 404,
+    message: "The requested inventory resource is not available.",
+  },
   LAST_ACTIVE_OWNER: {
     status: 409,
     message: "The last active owner cannot be removed.",

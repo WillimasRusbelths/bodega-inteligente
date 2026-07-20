@@ -24,7 +24,8 @@ export function parseDate(value: unknown): Date {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(value))
     throw new Error("The request is invalid.");
   const date = new Date(`${value}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime())) throw new Error("The request is invalid.");
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value)
+    throw new Error("The request is invalid.");
   return date;
 }
 
@@ -67,6 +68,19 @@ export interface LotListQuery {
 export function parseLotListQuery(
   value: Record<string, unknown>,
 ): LotListQuery {
+  const allowed = new Set([
+    "productId",
+    "categoryId",
+    "status",
+    "expiresBefore",
+    "expiresAfter",
+    "expirationState",
+    "cursor",
+    "limit",
+    "includeExpired",
+  ]);
+  if (Object.keys(value).some((key) => !allowed.has(key)))
+    throw new Error("The request is invalid.");
   const rawLimit = value["limit"] === undefined ? 50 : Number(value["limit"]);
   if (!Number.isInteger(rawLimit) || rawLimit < 1 || rawLimit > 100)
     throw new Error("The request is invalid.");

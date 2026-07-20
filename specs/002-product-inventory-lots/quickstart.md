@@ -147,6 +147,17 @@ La evidencia se prepara y luego se completa solo con observaciones reales en
 
 ## Evidence
 
+### Cierre técnico
+
+Las validaciones de cierre se ejecutan con `corepack pnpm lint`,
+`corepack pnpm format:check`, `corepack pnpm typecheck` y `corepack pnpm test`.
+Las pruebas específicas incluyen conformance OpenAPI, aislamiento A/B, contrato
+de persistencia y validadores de configuración. Los resultados observados se
+registran en `evidence/mvp-results.md`; el protocolo de usabilidad está en
+`evidence/usability.md` y el escenario k6 preparado en `evidence/performance.md`.
+Ningún resultado se considera aprobado sin una ejecución verificable contra el
+ambiente de pruebas autorizado.
+
 Conservar resultados reales en `specs/002-product-inventory-lots/evidence/` (a crear durante la
 implementación), incluyendo el protocolo y los resultados de SC-008 en `usability.md`. No completar
 métricas de rendimiento, usabilidad o E2E sin ejecución verificable.
