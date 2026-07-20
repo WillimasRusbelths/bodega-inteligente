@@ -22,6 +22,15 @@ function jsonResponse(
 ): void {
   const payload = JSON.stringify(body);
   response.statusCode = statusCode;
+  response.setHeader("Access-Control-Allow-Origin", "*");
+  response.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, X-Demo-Session, X-Correlation-Id",
+  );
+  response.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PATCH, OPTIONS",
+  );
   response.setHeader("Content-Type", "application/json; charset=utf-8");
   response.setHeader("Content-Length", Buffer.byteLength(payload));
   response.end(payload);
@@ -54,6 +63,12 @@ const DEMO_MEMBERSHIPS = Object.freeze({
   inventory_manager: "00000000-0000-4000-8000-000000000102",
   seller: "00000000-0000-4000-8000-000000000103",
 });
+
+const DEMO_LOGIN = {
+  propietario: { pin: "100001", role: "owner_admin" },
+  inventario: { pin: "100002", role: "inventory_manager" },
+  vendedor: { pin: "100003", role: "seller" },
+} as const;
 
 const ROLE_PERMISSIONS = Object.freeze({
   owner_admin: [
@@ -90,8 +105,60 @@ const ROLE_PERMISSIONS = Object.freeze({
 });
 
 type DemoRole = keyof typeof ROLE_PERMISSIONS;
+type DemoLoginUser = keyof typeof DEMO_LOGIN;
+
+interface DemoSessionPayload {
+  readonly sessionId: string;
+  readonly user: {
+    readonly id: string;
+    readonly displayName: string;
+    readonly phoneE164: string;
+  };
+  readonly tenant: {
+    readonly id: string;
+    readonly name: string;
+    readonly locationText: string | null;
+    readonly currencyCode: string;
+    readonly referenceSchedule: string | null;
+    readonly status: string;
+  };
+  readonly membership: {
+    readonly id: string;
+    readonly status: string;
+    readonly role: DemoRole;
+  };
+}
+
+function statusFromError(error: unknown): number {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    typeof error.status === "number"
+  ) {
+    return error.status;
+  }
+  if (error instanceof SyntaxError) return 400;
+  if (error instanceof Error && error.name === "TenantPermissionError") {
+    return 403;
+  }
+  if (error instanceof Error && error.name === "TenantSessionInvalidError") {
+    return 401;
+  }
+  return 500;
+}
+
+interface TenantSettingsInput {
+  readonly name?: string;
+  readonly locationText?: string | null;
+  readonly currencyCode?: string;
+  readonly referenceSchedule?: string | null;
+  readonly status?: "ACTIVE" | "DISABLED";
+}
 
 function demoRole(request: IncomingMessage): DemoRole {
+  const sessionRole = roleFromSessionHeader(request);
+  if (sessionRole !== null) return sessionRole;
   const value = request.headers["x-demo-role"];
   return value === "seller" || value === "inventory_manager"
     ? value
@@ -110,6 +177,150 @@ function demoContext(request: IncomingMessage): TenantContext {
     roles: [role],
     permissions: ROLE_PERMISSIONS[role],
   });
+}
+
+function demoSessionId(role: DemoRole): string {
+  return `demo-web-session-${role}`;
+}
+
+function roleFromSessionHeader(request: IncomingMessage): DemoRole | null {
+  const value = request.headers["x-demo-session"];
+  if (typeof value !== "string") return null;
+  for (const role of Object.keys(ROLE_PERMISSIONS) as DemoRole[]) {
+    if (value === demoSessionId(role)) return role;
+  }
+  return null;
+}
+
+function requireDemoSession(request: IncomingMessage): DemoRole {
+  assertDemoAllowed();
+  const role = roleFromSessionHeader(request);
+  if (role === null)
+    throw Object.assign(new Error("SESSION_REQUIRED"), { status: 401 });
+  return role;
+}
+
+function assertDemoAllowed(): void {
+  if (process.env["NODE_ENV"] === "production") {
+    throw Object.assign(new Error("DEMO_DISABLED"), { status: 403 });
+  }
+}
+
+async function readJsonBody(request: IncomingMessage): Promise<unknown> {
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of request) {
+    if (typeof chunk === "string") {
+      chunks.push(Buffer.from(chunk, "utf8"));
+    } else if (chunk instanceof Uint8Array) {
+      chunks.push(chunk);
+    } else {
+      throw Object.assign(new Error("INVALID_BODY"), { status: 400 });
+    }
+  }
+  if (chunks.length === 0) return {};
+  const raw = Buffer.concat(chunks).toString("utf8");
+  if (raw.trim().length === 0) return {};
+  return JSON.parse(raw) as unknown;
+}
+
+function record(value: unknown): Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw Object.assign(new Error("INVALID_BODY"), { status: 400 });
+  }
+  return value as Record<string, unknown>;
+}
+
+function optionalText(
+  value: unknown,
+  maxLength: number,
+): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== "string") {
+    throw Object.assign(new Error("INVALID_FIELD"), { status: 400 });
+  }
+  const trimmed = value.trim();
+  if (trimmed.length > maxLength) {
+    throw Object.assign(new Error("INVALID_FIELD"), { status: 400 });
+  }
+  return trimmed.length === 0 ? null : trimmed;
+}
+
+function requiredText(value: unknown, maxLength: number): string {
+  if (typeof value !== "string") {
+    throw Object.assign(new Error("INVALID_FIELD"), { status: 400 });
+  }
+  const trimmed = value.trim();
+  if (trimmed.length === 0 || trimmed.length > maxLength) {
+    throw Object.assign(new Error("INVALID_FIELD"), { status: 400 });
+  }
+  return trimmed;
+}
+
+function tenantSettingsInput(value: unknown): TenantSettingsInput {
+  const body = record(value);
+  const input: TenantSettingsInput = {};
+  const name = optionalText(body["name"], 160);
+  const locationText = optionalText(body["locationText"], 240);
+  const currencyCode = optionalText(body["currencyCode"], 3);
+  const referenceSchedule = optionalText(body["referenceSchedule"], 160);
+  const status = body["status"];
+  if (name !== undefined) Object.assign(input, { name });
+  if (locationText !== undefined) Object.assign(input, { locationText });
+  if (currencyCode !== undefined) {
+    Object.assign(input, {
+      currencyCode: currencyCode?.toUpperCase() ?? "PEN",
+    });
+  }
+  if (referenceSchedule !== undefined) {
+    Object.assign(input, { referenceSchedule });
+  }
+  if (status !== undefined) {
+    if (status !== "ACTIVE" && status !== "DISABLED") {
+      throw Object.assign(new Error("INVALID_FIELD"), { status: 400 });
+    }
+    Object.assign(input, { status });
+  }
+  return input;
+}
+
+async function demoSessionPayload(
+  prisma: PrismaModule,
+  role: DemoRole,
+): Promise<DemoSessionPayload> {
+  const tenantId = process.env["DEMO_TENANT_ID"]?.trim() || DEMO_TENANT_ID;
+  const [tenant, user] = await prisma.execute((db) =>
+    Promise.all([
+      db.tenant.findUnique({
+        where: { id: tenantId },
+        select: {
+          id: true,
+          name: true,
+          locationText: true,
+          currencyCode: true,
+          referenceSchedule: true,
+          status: true,
+        },
+      }),
+      db.user.findUnique({
+        where: { id: DEMO_USERS[role] },
+        select: { id: true, displayName: true, phoneE164: true },
+      }),
+    ]),
+  );
+  if (tenant === null || user === null) {
+    throw Object.assign(new Error("DEMO_SEED_REQUIRED"), { status: 404 });
+  }
+  return {
+    sessionId: demoSessionId(role),
+    user,
+    tenant: { ...tenant, status: tenant.status },
+    membership: {
+      id: DEMO_MEMBERSHIPS[role],
+      status: "ACTIVE",
+      role,
+    },
+  };
 }
 
 function biPath(pathname: string): string | null {
@@ -146,13 +357,154 @@ async function handleBiRoute(
   return true;
 }
 
+async function handleDemoAuthRoute(
+  request: IncomingMessage,
+  response: ServerResponse,
+  prisma: PrismaModule,
+): Promise<boolean> {
+  const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+  if (pathname === "/demo/auth/login" && request.method === "POST") {
+    assertDemoAllowed();
+    const body = record(await readJsonBody(request));
+    const username = requiredText(body["username"], 32) as DemoLoginUser;
+    const pin = requiredText(body["pin"], 16);
+    if (!(username in DEMO_LOGIN) || DEMO_LOGIN[username].pin !== pin) {
+      throw Object.assign(new Error("INVALID_DEMO_CREDENTIALS"), {
+        status: 401,
+      });
+    }
+    const payload = await demoSessionPayload(prisma, DEMO_LOGIN[username].role);
+    jsonResponse(response, 200, { data: payload });
+    return true;
+  }
+  if (pathname === "/demo/auth/session" && request.method === "GET") {
+    assertDemoAllowed();
+    const role = requireDemoSession(request);
+    jsonResponse(response, 200, {
+      data: await demoSessionPayload(prisma, role),
+    });
+    return true;
+  }
+  if (pathname === "/demo/auth/logout" && request.method === "POST") {
+    assertDemoAllowed();
+    requireDemoSession(request);
+    jsonResponse(response, 200, { data: { loggedOut: true } });
+    return true;
+  }
+  return false;
+}
+
+async function tenantSettings(
+  prisma: PrismaModule,
+  tenantId: string,
+): Promise<DemoSessionPayload["tenant"]> {
+  const tenant = await prisma.execute((db) =>
+    db.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        id: true,
+        name: true,
+        locationText: true,
+        currencyCode: true,
+        referenceSchedule: true,
+        status: true,
+      },
+    }),
+  );
+  if (tenant === null) {
+    throw Object.assign(new Error("TENANT_NOT_FOUND"), { status: 404 });
+  }
+  return { ...tenant, status: tenant.status };
+}
+
+async function handleTenantAdminRoute(
+  request: IncomingMessage,
+  response: ServerResponse,
+  prisma: PrismaModule,
+): Promise<boolean> {
+  const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+  const tenantId = process.env["DEMO_TENANT_ID"]?.trim() || DEMO_TENANT_ID;
+  if (pathname === "/tenants/current/settings" && request.method === "GET") {
+    requireDemoSession(request);
+    jsonResponse(response, 200, {
+      data: await tenantSettings(prisma, tenantId),
+    });
+    return true;
+  }
+  if (pathname === "/tenants/current/settings" && request.method === "PATCH") {
+    const role = requireDemoSession(request);
+    if (role !== "owner_admin") {
+      throw Object.assign(new Error("INSUFFICIENT_PERMISSION"), {
+        status: 403,
+      });
+    }
+    const input = tenantSettingsInput(await readJsonBody(request));
+    const tenant = await prisma.execute((db) =>
+      db.tenant.update({
+        where: { id: tenantId },
+        data: input,
+        select: {
+          id: true,
+          name: true,
+          locationText: true,
+          currencyCode: true,
+          referenceSchedule: true,
+          status: true,
+        },
+      }),
+    );
+    jsonResponse(response, 200, { data: { ...tenant, status: tenant.status } });
+    return true;
+  }
+  if (pathname === "/tenants/current/memberships" && request.method === "GET") {
+    const role = requireDemoSession(request);
+    if (role !== "owner_admin") {
+      throw Object.assign(new Error("INSUFFICIENT_PERMISSION"), {
+        status: 403,
+      });
+    }
+    const memberships = await prisma.execute((db) =>
+      db.membership.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          status: true,
+          tenantId: true,
+          user: { select: { displayName: true, phoneE164: true } },
+          membershipRoles: {
+            select: { role: { select: { code: true } } },
+            take: 1,
+          },
+        },
+      }),
+    );
+    jsonResponse(response, 200, {
+      data: memberships.map((membership) => ({
+        id: membership.id,
+        tenantId: membership.tenantId,
+        displayName: membership.user.displayName,
+        phoneE164: membership.user.phoneE164,
+        role: membership.membershipRoles[0]?.role.code ?? "seller",
+        status: membership.status,
+      })),
+    });
+    return true;
+  }
+  return false;
+}
+
 /** Test/performance HTTP boundary plus the read-only inventory BI demo API. */
 export function createApiServer() {
   const prisma = new PrismaModule();
   const controller = new BiController(new InventoryBiService(prisma));
   const server = createServer((request, response) => {
-    request.resume();
     const id = correlationId(request);
+
+    if (request.method === "OPTIONS") {
+      jsonResponse(response, 204, {});
+      return;
+    }
 
     if (request.method === "GET" && request.url === "/health") {
       jsonResponse(response, 200, {
@@ -163,9 +515,16 @@ export function createApiServer() {
       return;
     }
 
-    void handleBiRoute(request, response, controller)
+    void handleDemoAuthRoute(request, response, prisma)
+      .then((handled) =>
+        handled ? true : handleTenantAdminRoute(request, response, prisma),
+      )
+      .then((handled) =>
+        handled ? true : handleBiRoute(request, response, controller),
+      )
       .then((handled) => {
         if (handled || response.writableEnded) return;
+        request.resume();
         jsonResponse(response, 404, {
           error: {
             code: "RESOURCE_NOT_FOUND",
@@ -175,13 +534,7 @@ export function createApiServer() {
         });
       })
       .catch((error: unknown) => {
-        const status =
-          error instanceof Error && error.name === "TenantPermissionError"
-            ? 403
-            : error instanceof Error &&
-                error.name === "TenantSessionInvalidError"
-              ? 401
-              : 500;
+        const status = statusFromError(error);
         jsonResponse(response, status, {
           error: {
             code:

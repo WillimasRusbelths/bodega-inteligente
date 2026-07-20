@@ -24,6 +24,11 @@ Actualmente BodegIA tiene implementado el nucleo de inventario y BI operativo:
   `dw.fact_expiration_risk` y `dw.fact_inventory_alert`.
 - Consultas OLAP de inventario.
 - Dashboard web demo para OLTP, BI/OLAP y modelo dimensional.
+- Login web MVP demo con usuarios sinteticos `propietario`, `inventario` y
+  `vendedor`.
+- Configuracion MVP de bodega activa: nombre, ubicacion textual, moneda, horario
+  referencial y estado.
+- Vista web MVP de empleados y roles para `owner_admin`.
 
 El unico DataMart implementado en el MVP actual es el DataMart de Inventario.
 Los demas DataMarts descritos abajo forman parte del roadmap del sistema final.
@@ -49,7 +54,9 @@ privacidad de costos definidos desde el MVP.
 
 Las siguientes capacidades quedan registradas para fases posteriores:
 
-- Login real web y movil.
+- Hardening de login web productivo, recuperacion de cuenta y sesiones web
+  completas.
+- Login real movil.
 - APK Android.
 - Escaneo QR y codigo de barras.
 - OCR de fechas de vencimiento.

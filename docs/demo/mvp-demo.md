@@ -1,8 +1,9 @@
 # BodegIA MVP demo
 
 Esta demo abre en navegador una interfaz web administrativa y analitica del MVP
-de inventario. Usa `Demo mode`: no implementa login real, ventas reales,
-clientes, OCR, IA, offline ni Supabase remoto.
+de inventario. Usa `Demo mode` con login funcional basico contra la API local y
+PostgreSQL de pruebas. No implementa ventas reales, clientes, OCR, IA, offline
+ni Supabase remoto.
 
 ## Preparar base local
 
@@ -29,8 +30,10 @@ movimientos y alertas.
 corepack pnpm --filter @bodegia/api start:performance
 ```
 
-La API expone `GET /health` y los endpoints tenant-scoped del MVP, incluyendo
-BI bajo `/tenants/current/bi/*`.
+La API expone `GET /health`, endpoints tenant-scoped del MVP, BI bajo
+`/tenants/current/bi/*`, login demo bajo `/demo/auth/*`, configuracion de bodega
+bajo `/tenants/current/settings` y empleados demo bajo
+`/tenants/current/memberships`.
 
 ## Levantar frontend
 
@@ -51,36 +54,52 @@ corepack pnpm --dir apps/web preview
 
 1. Conectar laptop y celular a la misma red.
 2. Obtener la IP local de la laptop, por ejemplo con `ipconfig`.
-3. Levantar la demo web. El servidor escucha en `0.0.0.0` por defecto para la
-   demo local.
+3. Levantar la API y la demo web. Ambos servidores escuchan en `0.0.0.0` para
+   la demo local.
 4. Abrir desde el celular usando `http://IP_DE_LA_LAPTOP:5173`.
 
-Para limitar la demo solo a la laptop, ejecutar con `HOST=127.0.0.1`.
+Para limitar la demo solo a la laptop, ejecutar la web con `HOST=127.0.0.1`.
 
-## Login demo
+## Login MVP demo
 
 La pantalla inicial muestra `BodegIA`, el subtitulo `Plataforma inteligente para
-bodegas familiares`, el texto `MVP web administrativo y analitico`, tarjetas de
-usuario demo y el boton `Entrar al dashboard`.
+bodegas familiares`, el texto `MVP web con login funcional, bodega activa, roles
+e inventario`, tarjetas de usuario demo y el boton `Iniciar sesion`.
 
-El acceso por rol es simulado para la presentacion del MVP. No hay contrasena,
-tokens ni autenticacion real en esta pantalla.
+Usuarios sinteticos creados por `corepack pnpm seed:demo`:
 
-## Quien entra a la web
+| Usuario       | PIN demo | Rol                 |
+| ------------- | -------- | ------------------- |
+| `propietario` | `100001` | `owner_admin`       |
+| `inventario`  | `100002` | `inventory_manager` |
+| `vendedor`    | `100003` | `seller`            |
 
-- Dueño administrador: ve gestion completa, costos, valorizacion de inventario,
-  perdida estimada, Data Warehouse/DataMart y BI/OLAP completo.
-- Encargado de inventario: ve productos, lotes, stock, movimientos, alertas,
-  FEFO y BI operativo. Puede ver valorizacion en la demo.
-- Vendedor: ve productos, stock, alertas basicas y FEFO operativo. No ve costos,
-  valorizacion ni perdida estimada. La interfaz muestra `Vista operativa:
-costos protegidos`.
+El login demo valida estas credenciales contra la API local y crea una sesion
+MVP de demostracion mediante `X-Demo-Session`. Este flujo esta deshabilitado si
+`NODE_ENV=production` y no sustituye el hardening productivo de autenticacion
+web.
 
-## Que mostrar
+## Que puede hacer cada rol
 
-- Login demo profesional con selector de rol.
+- `owner_admin`: ve gestion completa, configuracion de bodega, empleados,
+  costos, valorizacion de inventario, perdida estimada, Data Warehouse/DataMart
+  y BI/OLAP completo.
+- `inventory_manager`: ve productos, lotes, stock, movimientos, alertas, FEFO y
+  BI operativo. Puede ver valorizacion operativa, pero no administra empleados
+  en este Sprint 1.
+- `seller`: ve productos, stock, alertas basicas y FEFO operativo. No ve costos,
+  valorizacion, perdida estimada, configuracion de bodega ni administracion de
+  empleados. La interfaz muestra `Vista operativa: costos protegidos`.
+
+## Que mostrar en la exposicion
+
+- Login MVP demo con usuario, PIN, sesion activa y cierre de sesion.
 - Dashboard principal con barra lateral, encabezado, rol activo y estado del
   sistema.
+- Configuracion de bodega para `owner_admin`: nombre, ubicacion textual, moneda,
+  horario referencial y estado.
+- Empleados y roles para `owner_admin`: propietario, encargado de inventario y
+  vendedor asociados a la bodega activa.
 - Inicio: KPIs de productos, stock, stock bajo, proximos a vencer, vencidos,
   alertas activas y valorizacion solo para roles autorizados.
 - OLTP: productos, categorias, lotes, movimientos/kardex, stock, alertas y
@@ -89,10 +108,10 @@ costos protegidos`.
   schema `dw`, dimensiones y hechos.
 - BI/OLAP: KPIs, barras de stock por categoria, movimientos por tipo, riesgo de
   vencimiento y alertas por tipo/estado.
-- Roles: comparacion clara entre dueño administrador, encargado de inventario y
-  vendedor.
-- Roadmap: APK Android, login real, escaneo, OCR, ventas rapidas, clientes,
-  proveedores, compras, promociones, precios y DataMarts futuros.
+- Permisos: comparacion clara entre dueno administrador, encargado de inventario
+  y vendedor.
+- Roadmap: APK Android, hardening de login, escaneo, OCR, ventas rapidas,
+  clientes, proveedores, compras, promociones, precios y DataMarts futuros.
 
 ## Diferencia OLTP, DataMart y BI/OLAP
 
@@ -107,11 +126,12 @@ BI/OLAP resume datos agregados para tomar decisiones: stock por categoria,
 riesgo de vencimiento, movimientos por tipo, alertas y valorizacion para roles
 autorizados.
 
-## Pendiente para movil/APK
+## Pendiente para produccion y movil/APK
 
-La demo web no genera APK ni implementa app movil final. El roadmap contempla
-APK Android, login real movil, escaneo QR/codigo de barras, OCR de vencimientos
-y modo offline movil como fases posteriores.
+Queda pendiente el hardening productivo de autenticacion web, recuperacion de
+cuenta, alta completa de empleados, APK Android, login real movil, escaneo
+QR/codigo de barras, OCR de vencimientos y modo offline movil como fases
+posteriores.
 
 El alcance implementado y el roadmap del sistema completo estan documentados en
 `docs/roadmap/sistema-final-bodegia.md`.

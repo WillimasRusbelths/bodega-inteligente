@@ -38,7 +38,8 @@
         color: inherit;
       }
       button,
-      input {
+      input,
+      select {
         font: inherit;
       }
       .shell {
@@ -107,6 +108,54 @@
       .login-role-card.is-selected {
         border-color: var(--accent);
         box-shadow: inset 0 0 0 1px var(--accent);
+      }
+      .login-form,
+      .settings-form {
+        display: grid;
+        gap: 12px;
+      }
+      .settings-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .login-form label,
+      .settings-form label {
+        color: var(--muted);
+        display: grid;
+        font-size: 0.82rem;
+        font-weight: 800;
+        gap: 6px;
+        text-transform: uppercase;
+      }
+      .login-form input,
+      .settings-form input,
+      .settings-form select {
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        color: var(--ink);
+        padding: 11px 12px;
+        text-transform: none;
+      }
+      .login-form .primary-action,
+      .settings-form .primary-action,
+      .settings-form .form-status {
+        align-self: end;
+      }
+      .form-error,
+      .form-status,
+      .permission-note,
+      .session-chip {
+        color: var(--muted);
+        margin: 0;
+      }
+      .form-error {
+        color: var(--danger);
+        font-weight: 700;
+      }
+      .locked-panel {
+        background:
+          linear-gradient(135deg, rgba(183, 121, 31, 0.08), transparent 45%),
+          var(--surface);
       }
       .mode-label,
       .eyebrow,
@@ -421,7 +470,8 @@
         .star-model,
         .role-grid,
         .flow,
-        .login-roles {
+        .login-roles,
+        .settings-form {
           grid-template-columns: 1fr;
         }
         .app-topbar,

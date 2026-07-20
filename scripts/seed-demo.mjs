@@ -69,6 +69,9 @@ async function main() {
         name: "Bodega San Cristóbal",
         status: "ACTIVE",
         operatingTimeZone: "America/Lima",
+        locationText: "Ayacucho, Peru",
+        currencyCode: "PEN",
+        referenceSchedule: "Lunes a domingo, 7:00 a 22:00",
       },
       create: {
         id: ids.tenant,
@@ -76,6 +79,9 @@ async function main() {
         status: "ACTIVE",
         createdByTechnicalAdminId: ownerUser,
         operatingTimeZone: "America/Lima",
+        locationText: "Ayacucho, Peru",
+        currencyCode: "PEN",
+        referenceSchedule: "Lunes a domingo, 7:00 a 22:00",
       },
     });
     for (const [id, displayName, phoneE164] of [
@@ -544,6 +550,9 @@ async function main() {
     }
   });
   globalThis.console.log(`Demo seed ready for tenant ${ids.tenant}.`);
+  globalThis.console.log(
+    "Demo web users: propietario/100001, inventario/100002, vendedor/100003.",
+  );
 }
 
 main()
