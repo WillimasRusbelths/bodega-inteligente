@@ -16,6 +16,12 @@ const roles = new Set<InventoryWebRole>([
   "seller",
 ]);
 
+declare global {
+  interface Window {
+    readonly __BODEGIA_API_BASE_URL?: string;
+  }
+}
+
 type ApiResponse<T> =
   | { readonly data: T }
   | {
@@ -38,6 +44,10 @@ function apiBaseUrl(): string {
   const configured = globalThis.sessionStorage.getItem("BODEGIA_API_BASE_URL");
   if (configured !== null && configured.trim().length > 0) {
     return configured.trim().replace(/\/$/u, "");
+  }
+  const runtimeConfigured = globalThis.window.__BODEGIA_API_BASE_URL;
+  if (runtimeConfigured !== undefined && runtimeConfigured.trim().length > 0) {
+    return runtimeConfigured.trim().replace(/\/$/u, "");
   }
   return `${globalThis.location.protocol}//${globalThis.location.hostname}:3000`;
 }

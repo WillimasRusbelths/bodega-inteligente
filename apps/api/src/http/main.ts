@@ -18,15 +18,29 @@ import {
 } from "../modules/sales/quick-sale.service.js";
 
 const DEFAULT_PORT = 3000;
+const LOCAL_WEB_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
 
-function jsonResponse(
-  response: ServerResponse,
-  statusCode: number,
-  body: Readonly<Record<string, unknown>>,
-): void {
-  const payload = JSON.stringify(body);
-  response.statusCode = statusCode;
-  response.setHeader("Access-Control-Allow-Origin", "*");
+function configuredCorsOrigins(): readonly string[] {
+  const configured = process.env["CORS_ORIGIN"]?.trim();
+  const configuredOrigins =
+    configured === undefined || configured.length === 0
+      ? []
+      : configured
+          .split(",")
+          .map((origin) => origin.trim())
+          .filter((origin) => origin.length > 0);
+  return process.env["NODE_ENV"] === "production"
+    ? configuredOrigins
+    : [...LOCAL_WEB_ORIGINS, ...configuredOrigins];
+}
+
+function applyCorsHeaders(response: ServerResponse): void {
+  const origins = configuredCorsOrigins();
+  const origin = origins.at(0);
+  if (origin !== undefined) {
+    response.setHeader("Access-Control-Allow-Origin", origin);
+    response.setHeader("Vary", "Origin");
+  }
   response.setHeader(
     "Access-Control-Allow-Headers",
     "Content-Type, X-Demo-Session, X-Correlation-Id",
@@ -35,6 +49,16 @@ function jsonResponse(
     "Access-Control-Allow-Methods",
     "GET, POST, PATCH, OPTIONS",
   );
+}
+
+function jsonResponse(
+  response: ServerResponse,
+  statusCode: number,
+  body: Readonly<Record<string, unknown>>,
+): void {
+  const payload = JSON.stringify(body);
+  response.statusCode = statusCode;
+  applyCorsHeaders(response);
   response.setHeader("Content-Type", "application/json; charset=utf-8");
   response.setHeader("Content-Length", Buffer.byteLength(payload));
   response.end(payload);

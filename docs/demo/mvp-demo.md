@@ -41,6 +41,13 @@ bajo `/tenants/current/settings` y empleados demo bajo
 - `GET /tenants/current/sales`
 - `GET /tenants/current/sales/{saleId}`
 
+Para produccion tecnica en Render/Railway, compilar y ejecutar:
+
+```powershell
+corepack pnpm --filter @bodegia/api build
+corepack pnpm --filter @bodegia/api start:prod
+```
+
 ## Levantar frontend
 
 ```powershell
@@ -55,6 +62,11 @@ Tambien se puede compilar y previsualizar:
 corepack pnpm --dir apps/web build
 corepack pnpm --dir apps/web preview
 ```
+
+Para Vercel, usar preferentemente la raiz del monorepo como root directory,
+definir `VITE_API_BASE_URL` con la URL publica de la API y construir con
+`corepack pnpm --dir apps/web build`. Si se configura `apps/web` como root
+directory, usar el `apps/web/vercel.json` incluido.
 
 ## Abrir desde celular
 
@@ -188,3 +200,6 @@ posteriores.
 
 El alcance implementado y el roadmap del sistema completo estan documentados en
 `docs/roadmap/sistema-final-bodegia.md`.
+
+La guia de despliegue MVP para Supabase, Render/Railway y Vercel esta en
+`docs/deployment/mvp-deployment.md`.
