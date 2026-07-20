@@ -2,6 +2,10 @@ import { PrismaClient } from "@prisma/client";
 import process from "node:process";
 
 const prisma = new PrismaClient();
+const demoTransactionOptions = {
+  maxWait: 15_000,
+  timeout: 120_000,
+};
 const ids = {
   tenant: "00000000-0000-4000-8000-000000000001",
   users: {
@@ -574,7 +578,7 @@ async function main() {
         },
       });
     }
-  });
+  }, demoTransactionOptions);
   globalThis.console.log(`Demo seed ready for tenant ${ids.tenant}.`);
   globalThis.console.log(
     "Demo web users: propietario/100001, inventario/100002, vendedor/100003.",
