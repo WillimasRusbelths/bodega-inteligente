@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "start": "node dist/src/http/main.js",
+    "start:prod": "node dist/src/http/main.js",
     "typecheck": "tsc --noEmit",
     "start:performance": "pnpm build && node dist/src/http/main.js"
   },

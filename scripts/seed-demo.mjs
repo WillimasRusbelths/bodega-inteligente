@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import process from "node:process";
 
 const prisma = new PrismaClient();
 const ids = {
@@ -35,6 +36,16 @@ function day(offset) {
   return value;
 }
 
+function requireDemoSeedPermission() {
+  const nodeEnv = process.env["NODE_ENV"] ?? "development";
+  const allowDemoSeed = process.env["ALLOW_DEMO_SEED"] === "true";
+  if (nodeEnv === "production" && !allowDemoSeed) {
+    throw new Error(
+      "Refusing to run demo seed with NODE_ENV=production. Set ALLOW_DEMO_SEED=true only for an approved demo database.",
+    );
+  }
+}
+
 function product(
   id,
   name,
@@ -62,6 +73,7 @@ function product(
 }
 
 async function main() {
+  requireDemoSeedPermission();
   const now = new Date();
   const ownerUser = ids.users.owner;
   await prisma.$transaction(async (tx) => {
