@@ -138,6 +138,9 @@ model Tenant {
   disabledReason            String?      @db.VarChar(500)
   createdByTechnicalAdminId String       @db.Uuid
   operatingTimeZone         String       @default("America/Lima") @db.VarChar(64)
+  locationText              String?      @db.VarChar(240)
+  currencyCode              String       @default("PEN") @db.Char(3)
+  referenceSchedule         String?      @db.VarChar(160)
   version                   Int          @default(1)
   createdAt                 DateTime     @default(now()) @db.Timestamptz(3)
   updatedAt                 DateTime     @updatedAt @db.Timestamptz(3)

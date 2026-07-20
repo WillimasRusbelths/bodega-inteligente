@@ -6,31 +6,42 @@ import {
 } from "../src/demo/mvp-demo.js";
 
 describe("BodeGIA MVP browser demo", () => {
-  it("renders a professional demo access screen without real authentication", () => {
+  it("renders a professional demo access screen with MVP demo credentials", () => {
     const html = renderDemoLogin("owner_admin");
 
     expect(html).toContain("BodegIA");
     expect(html).toContain("Plataforma inteligente para bodegas familiares");
-    expect(html).toContain("MVP web administrativo y anal");
+    expect(html).toContain("MVP web con login funcional");
     expect(html).toContain("Due&ntilde;o administrador");
     expect(html).toContain("Encargado de inventario");
     expect(html).toContain("Vendedor");
-    expect(html).toContain("Entrar al dashboard");
+    expect(html).toContain("Iniciar sesi");
     expect(html).toContain("Modo demo");
-    expect(html).toContain("El acceso por rol es simulado");
+    expect(html).toContain("propietario");
+    expect(html).toContain("100001");
+    expect(html).toContain("inventario");
+    expect(html).toContain("100002");
+    expect(html).toContain("vendedor");
+    expect(html).toContain("100003");
     expect(html).not.toContain("password");
     expect(html).not.toContain("accessToken");
   });
 
-  it("renders the requested OLTP, DataMart, BI/OLAP, roles and roadmap sections", () => {
+  it("renders the requested session, configuration, employees, OLTP, DataMart, BI/OLAP, roles and roadmap sections", () => {
     const html = renderBodegiaMvpDemo("owner_admin");
 
     expect(html).toContain("BodegIA MVP");
     expect(html).toContain("Bodega San Crist");
+    expect(html).toContain("Sesi&oacute;n MVP web");
+    expect(html).toContain("Usuario: Propietario demo");
+    expect(html).toContain("Cerrar sesi&oacute;n");
+    expect(html).toContain("Configuraci&oacute;n de bodega");
+    expect(html).toContain("Empleados y roles");
+    expect(html).toContain("Guardar configuraci&oacute;n");
     expect(html).toContain("Operacion OLTP");
     expect(html).toContain("Data Warehouse / DataMart de Inventario");
     expect(html).toContain("BI/OLAP");
-    expect(html).toContain("Roles");
+    expect(html).toContain("Permisos");
     expect(html).toContain("Roadmap");
     expect(html).toContain("public.products");
     expect(html).toContain("dw.dim_product");
@@ -49,6 +60,8 @@ describe("BodeGIA MVP browser demo", () => {
     expect(html).not.toContain("S/ 46.80");
     expect(html).not.toContain("<th>Costo</th>");
     expect(html).not.toContain("Perdida estimada");
+    expect(html).not.toContain("Guardar configuraci&oacute;n");
+    expect(html).toContain("Acceso reservado para due");
   });
 
   it("shows authorized valuation to administrative roles", () => {
@@ -57,5 +70,18 @@ describe("BodeGIA MVP browser demo", () => {
     expect(html).toContain("Valorizacion");
     expect(html).toContain("S/ 680.60");
     expect(html).toContain("Perdida estimada");
+    expect(html).not.toContain("Guardar configuraci&oacute;n");
+  });
+
+  it("shows tenant configuration and employees only to owner_admin", () => {
+    const ownerHtml = renderBodegiaDashboard("owner_admin");
+    const sellerHtml = renderBodegiaDashboard("seller");
+
+    expect(ownerHtml).toContain("Propietario demo");
+    expect(ownerHtml).toContain("Encargado demo");
+    expect(ownerHtml).toContain("Vendedor demo");
+    expect(ownerHtml).toContain("Ayacucho, Peru");
+    expect(sellerHtml).toContain("La administraci&oacute;n de empleados");
+    expect(sellerHtml).not.toContain("Propietario demo</strong>");
   });
 });

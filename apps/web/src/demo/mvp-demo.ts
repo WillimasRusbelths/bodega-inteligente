@@ -12,6 +12,53 @@ import {
   type DemoInventoryData,
 } from "./demo-data.js";
 
+export interface DemoTenantSession {
+  readonly id: string;
+  readonly name: string;
+  readonly locationText: string | null;
+  readonly currencyCode: string;
+  readonly referenceSchedule: string | null;
+  readonly status: string;
+}
+
+export interface DemoUserSession {
+  readonly id: string;
+  readonly displayName: string;
+  readonly phoneE164: string;
+}
+
+export interface DemoMembershipSession {
+  readonly id: string;
+  readonly status: string;
+  readonly role: InventoryWebRole;
+}
+
+export interface DemoEmployee {
+  readonly id: string;
+  readonly displayName: string;
+  readonly phoneE164: string;
+  readonly role: string;
+  readonly status: string;
+  readonly tenantId: string;
+}
+
+export interface DemoWebSession {
+  readonly sessionId: string;
+  readonly user: DemoUserSession;
+  readonly tenant: DemoTenantSession;
+  readonly membership: DemoMembershipSession;
+  readonly employees?: readonly DemoEmployee[];
+}
+
+export const demoCredentials: Record<
+  InventoryWebRole,
+  { readonly username: string; readonly pin: string }
+> = {
+  owner_admin: { username: "propietario", pin: "100001" },
+  inventory_manager: { username: "inventario", pin: "100002" },
+  seller: { username: "vendedor", pin: "100003" },
+};
+
 const roleLabels: Record<InventoryWebRole, string> = {
   owner_admin: "Due&ntilde;o administrador",
   inventory_manager: "Encargado de inventario",
@@ -19,9 +66,9 @@ const roleLabels: Record<InventoryWebRole, string> = {
 };
 
 const roleDescriptions: Record<InventoryWebRole, string> = {
-  owner_admin: "Gestion completa, costos, valorizacion y BI completo.",
+  owner_admin: "Gestion completa, costos, valorizacion, bodega y empleados.",
   inventory_manager: "Control operativo de lotes, stock, alertas y FEFO.",
-  seller: "Consulta rapida de productos, stock y alertas basicas.",
+  seller: "Consulta rapida de productos y stock sin costos.",
 };
 
 function escapeHtml(value: string): string {
@@ -41,6 +88,71 @@ function canSeeValuation(role: InventoryWebRole): boolean {
   return role !== "seller";
 }
 
+function canManageTenant(role: InventoryWebRole): boolean {
+  return role === "owner_admin";
+}
+
+function defaultSession(role: InventoryWebRole): DemoWebSession {
+  const credentials = demoCredentials[role];
+  return {
+    sessionId: `demo-web-session-${role}`,
+    user: {
+      id: `demo-user-${role}`,
+      displayName:
+        role === "owner_admin"
+          ? "Propietario demo"
+          : role === "inventory_manager"
+            ? "Encargado demo"
+            : "Vendedor demo",
+      phoneE164:
+        role === "owner_admin"
+          ? "+51900000001"
+          : role === "inventory_manager"
+            ? "+51900000002"
+            : "+51900000003",
+    },
+    tenant: {
+      id: "00000000-0000-4000-8000-000000000001",
+      name: "Bodega San Cristobal",
+      locationText: "Ayacucho, Peru",
+      currencyCode: "PEN",
+      referenceSchedule: "Lunes a domingo, 7:00 a 22:00",
+      status: "ACTIVE",
+    },
+    membership: {
+      id: `demo-membership-${credentials.username}`,
+      status: "ACTIVE",
+      role,
+    },
+    employees: [
+      {
+        id: "demo-employee-owner",
+        displayName: "Propietario demo",
+        phoneE164: "+51900000001",
+        role: "owner_admin",
+        status: "ACTIVE",
+        tenantId: "00000000-0000-4000-8000-000000000001",
+      },
+      {
+        id: "demo-employee-inventory",
+        displayName: "Encargado demo",
+        phoneE164: "+51900000002",
+        role: "inventory_manager",
+        status: "ACTIVE",
+        tenantId: "00000000-0000-4000-8000-000000000001",
+      },
+      {
+        id: "demo-employee-seller",
+        displayName: "Vendedor demo",
+        phoneE164: "+51900000003",
+        role: "seller",
+        status: "ACTIVE",
+        tenantId: "00000000-0000-4000-8000-000000000001",
+      },
+    ],
+  };
+}
+
 function badge(value: string): string {
   return `<span class="status-badge status-${escapeHtml(value.toLowerCase())}">${escapeHtml(value)}</span>`;
 }
@@ -58,47 +170,64 @@ function progressBar(label: string, value: number, max: number): string {
   return `<div class="bar-row"><span>${escapeHtml(label)}</span><div class="bar-track"><div class="bar-fill" style="width:${width}%"></div></div><strong>${value}</strong></div>`;
 }
 
+function roleLabel(role: string): string {
+  return role === "owner_admin" ||
+    role === "inventory_manager" ||
+    role === "seller"
+    ? roleLabels[role]
+    : escapeHtml(role);
+}
+
 export function renderDemoLogin(
   role: InventoryWebRole = "owner_admin",
 ): string {
   const cards = (Object.keys(roleLabels) as InventoryWebRole[])
-    .map(
-      (
-        candidate,
-      ) => `<label class="login-role-card${candidate === role ? " is-selected" : ""}">
-        <input type="radio" name="demo-role-card" value="${candidate}"${candidate === role ? " checked" : ""} />
+    .map((candidate) => {
+      const credentials = demoCredentials[candidate];
+      return `<label class="login-role-card${candidate === role ? " is-selected" : ""}">
+        <input type="radio" name="demo-role-card" value="${candidate}"${candidate === role ? " checked" : ""} data-username="${credentials.username}" data-pin="${credentials.pin}" />
         <span>${roleLabels[candidate]}</span>
         <small>${escapeHtml(roleDescriptions[candidate])}</small>
-      </label>`,
-    )
+      </label>`;
+    })
     .join("");
+  const credentials = demoCredentials[role];
   return `<main class="login-screen" data-testid="demo-login">
     <section class="login-panel" aria-labelledby="login-title">
-      <span class="mode-label">Modo demo</span>
+      <span class="mode-label">Modo demo seguro</span>
       <h1 id="login-title">BodegIA</h1>
       <p class="login-subtitle">Plataforma inteligente para bodegas familiares</p>
-      <p class="login-copy">MVP web administrativo y anal&iacute;tico</p>
+      <p class="login-copy">MVP web con login funcional, bodega activa, roles e inventario.</p>
       <div class="login-roles" role="radiogroup" aria-label="Usuario demo">${cards}</div>
-      <button class="primary-action" id="enter-dashboard" type="button">Entrar al dashboard</button>
-      <p class="login-note">El acceso por rol es simulado para la presentaci&oacute;n del MVP.</p>
+      <form id="demo-login-form" class="login-form">
+        <label>Usuario demo<input id="demo-username" name="username" value="${credentials.username}" autocomplete="username" /></label>
+        <label>PIN demo<input id="demo-pin" name="pin" value="${credentials.pin}" inputmode="numeric" maxlength="6" autocomplete="one-time-code" /></label>
+        <button class="primary-action" id="enter-dashboard" type="submit">Iniciar sesi&oacute;n</button>
+        <p id="login-error" class="form-error" role="alert"></p>
+      </form>
+      <p class="login-note">Credenciales sint&eacute;ticas para PostgreSQL local: propietario/100001, inventario/100002 y vendedor/100003. Deshabilitado en producci&oacute;n.</p>
     </section>
   </main>`;
 }
 
-function renderTopbar(data: DemoInventoryData): string {
+function renderTopbar(
+  data: DemoInventoryData,
+  session: DemoWebSession,
+): string {
   const sellerNotice =
     data.role === "seller"
       ? '<span class="privacy-chip">Vista operativa: costos protegidos</span>'
       : '<span class="privacy-chip">Costos visibles para rol autorizado</span>';
   return `<header class="app-topbar">
     <div>
-      <span class="mode-label">Modo demo</span>
+      <span class="mode-label">Sesi&oacute;n MVP web</span>
       <h1>BodegIA MVP</h1>
-      <p>Bodega San Crist&oacute;bal &middot; ${roleLabels[data.role]} &middot; Sistema operativo</p>
+      <p>${escapeHtml(session.tenant.name)} &middot; ${roleLabels[data.role]} &middot; ${escapeHtml(session.tenant.status)}</p>
     </div>
     <div class="topbar-actions">
       ${sellerNotice}
-      <button id="change-demo-user" class="secondary-action" type="button">Cambiar usuario demo</button>
+      <span class="session-chip">Usuario: ${escapeHtml(session.user.displayName)}</span>
+      <button id="logout-demo-user" class="secondary-action" type="button">Cerrar sesi&oacute;n</button>
     </div>
   </header>`;
 }
@@ -106,10 +235,12 @@ function renderTopbar(data: DemoInventoryData): string {
 function renderSidebar(): string {
   const links = [
     ["#inicio", "Inicio"],
+    ["#configuracion", "Configuracion de bodega"],
+    ["#empleados", "Empleados y roles"],
     ["#oltp", "Operacion OLTP"],
     ["#warehouse", "Data Warehouse"],
     ["#bi", "BI/OLAP"],
-    ["#roles", "Roles"],
+    ["#roles", "Permisos"],
     ["#roadmap", "Roadmap"],
   ];
   return `<aside class="sidebar" aria-label="Navegacion principal">
@@ -138,6 +269,53 @@ function renderExecutiveSummary(data: DemoInventoryData): string {
       ${metricCard("Alertas activas", summary.activeAlerts, "danger")}
       ${valuation}
     </div>
+  </section>`;
+}
+
+function renderTenantSettings(session: DemoWebSession): string {
+  const role = session.membership.role;
+  if (!canManageTenant(role)) {
+    return `<section id="configuracion" class="panel locked-panel" aria-labelledby="configuracion-title">
+      <div class="section-heading"><span class="eyebrow">Configuracion</span><h2 id="configuracion-title">Configuraci&oacute;n de bodega</h2><p>Tu rol puede operar inventario, pero no administrar la configuraci&oacute;n de la bodega.</p></div>
+      <p class="permission-note">Acceso reservado para due&ntilde;o administrador.</p>
+    </section>`;
+  }
+  return `<section id="configuracion" class="panel" aria-labelledby="configuracion-title">
+    <div class="section-heading"><span class="eyebrow">Configuracion</span><h2 id="configuracion-title">Configuraci&oacute;n de bodega</h2><p>Actualizaci&oacute;n MVP tenant-scoped de la bodega activa.</p></div>
+    <form id="tenant-settings-form" class="settings-form">
+      <label>Nombre de bodega<input name="name" value="${escapeHtml(session.tenant.name)}" maxlength="160" /></label>
+      <label>Ubicaci&oacute;n textual<input name="locationText" value="${escapeHtml(session.tenant.locationText ?? "")}" maxlength="240" /></label>
+      <label>Moneda<input name="currencyCode" value="${escapeHtml(session.tenant.currencyCode)}" maxlength="3" /></label>
+      <label>Horario referencial<input name="referenceSchedule" value="${escapeHtml(session.tenant.referenceSchedule ?? "")}" maxlength="160" /></label>
+      <label>Estado<select name="status"><option value="ACTIVE"${session.tenant.status === "ACTIVE" ? " selected" : ""}>Activo</option><option value="DISABLED"${session.tenant.status === "DISABLED" ? " selected" : ""}>Inactivo</option></select></label>
+      <button class="primary-action" type="submit">Guardar configuraci&oacute;n</button>
+      <p id="settings-result" class="form-status" role="status"></p>
+    </form>
+  </section>`;
+}
+
+function employeeRows(employees: readonly DemoEmployee[]): string {
+  return employees
+    .map(
+      (employee) =>
+        `<tr><td><strong>${escapeHtml(employee.displayName)}</strong><small>${escapeHtml(employee.phoneE164)}</small></td><td>${roleLabel(employee.role)}</td><td>${badge(employee.status)}</td><td>${escapeHtml(employee.tenantId.slice(-6))}</td></tr>`,
+    )
+    .join("");
+}
+
+function renderEmployees(session: DemoWebSession): string {
+  if (!canManageTenant(session.membership.role)) {
+    return `<section id="empleados" class="panel locked-panel" aria-labelledby="empleados-title">
+      <div class="section-heading"><span class="eyebrow">Equipo</span><h2 id="empleados-title">Empleados y roles</h2><p>La administraci&oacute;n de empleados est&aacute; protegida por RBAC.</p></div>
+      <p class="permission-note">Solo el due&ntilde;o administrador puede ver y administrar empleados.</p>
+    </section>`;
+  }
+  const employees =
+    session.employees ?? defaultSession("owner_admin").employees ?? [];
+  return `<section id="empleados" class="panel" aria-labelledby="empleados-title">
+    <div class="section-heading"><span class="eyebrow">Equipo</span><h2 id="empleados-title">Empleados y roles</h2><p>Empleados demo asociados a la bodega activa.</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Empleado</th><th>Rol</th><th>Estado</th><th>Bodega</th></tr></thead><tbody>${employeeRows(employees)}</tbody></table></div>
+    <p class="permission-note">La creaci&oacute;n avanzada de empleados queda para el flujo administrativo completo; esta vista lista memberships reales del seed demo.</p>
   </section>`;
 }
 
@@ -288,16 +466,19 @@ function renderRoles(): string {
   const roles = [
     [
       "Due&ntilde;o administrador",
-      "Gestion completa; costos; valorizacion; BI completo.",
+      "Gestion completa; configuracion de bodega; empleados; costos; valorizacion; BI completo.",
     ],
     [
       "Encargado de inventario",
-      "Control operativo; lotes; stock; alertas; FEFO.",
+      "Control operativo; lotes; stock; alertas; FEFO; sin administracion de empleados.",
     ],
-    ["Vendedor", "Consulta operativa; atencion rapida; costos protegidos."],
+    [
+      "Vendedor",
+      "Consulta productos y stock; costos, valorizacion y configuracion protegidos.",
+    ],
   ];
   return `<section id="roles" class="panel" aria-labelledby="roles-title">
-    <div class="section-heading"><span class="eyebrow">Roles</span><h2 id="roles-title">Acceso visible por rol demo</h2></div>
+    <div class="section-heading"><span class="eyebrow">Permisos</span><h2 id="roles-title">Acceso visible por rol demo</h2></div>
     <div class="role-grid">${roles.map(([title, copy]) => `<article class="card"><h3>${title}</h3><p>${copy}</p></article>`).join("")}</div>
   </section>`;
 }
@@ -305,7 +486,7 @@ function renderRoles(): string {
 function renderRoadmap(): string {
   const items = [
     "APK Android",
-    "Login real",
+    "Login productivo hardening",
     "Escaneo QR/codigo de barras",
     "OCR de vencimientos",
     "Ventas rapidas",
@@ -327,13 +508,16 @@ function renderRoadmap(): string {
 
 export function renderBodegiaDashboard(
   role: InventoryWebRole = "owner_admin",
+  session: DemoWebSession = defaultSession(role),
 ): string {
   const data = createDemoInventoryData(role);
-  return `<div class="app-shell" data-testid="demo-dashboard" data-role="${role}">
+  return `<div class="app-shell" data-testid="demo-dashboard" data-role="${role}" data-session="${escapeHtml(session.sessionId)}">
     ${renderSidebar()}
     <main class="dashboard-main">
-      ${renderTopbar(data)}
+      ${renderTopbar(data, session)}
       ${renderExecutiveSummary(data)}
+      ${renderTenantSettings(session)}
+      ${renderEmployees(session)}
       ${renderOltp(data)}
       ${renderWarehouse()}
       ${renderBi(data)}
