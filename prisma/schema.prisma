@@ -108,6 +108,10 @@ enum InventoryAlertStatus {
   RESOLVED
 }
 
+enum SaleStatus {
+  COMPLETED
+}
+
 model User {
   id             String     @id @default(uuid()) @db.Uuid
   displayName    String     @db.VarChar(120)
@@ -126,6 +130,7 @@ model User {
   createdLots        Lot[]               @relation("LotCreatedBy")
   inventoryMovements InventoryMovement[] @relation("InventoryMovementActor")
   resolvedAlerts     InventoryAlert[]    @relation("AlertResolvedBy")
+  soldSales          Sale[]              @relation("SaleSeller")
 
   @@index([status])
 }
@@ -160,6 +165,7 @@ model Tenant {
   inventoryBalances    InventoryBalance[]
   alertRules           AlertRule[]
   inventoryAlerts      InventoryAlert[]
+  sales                Sale[]
 
   @@index([status])
 }
@@ -192,6 +198,7 @@ model Membership {
   deviceProfilesByUser       DeviceProfile[]       @relation("DeviceProfileMembershipUser")
   activeSessions             Session[]
   effectiveAuditEvents       AuditEvent[]          @relation("AuditEffectiveMembership")
+  sales                      Sale[]
 
   @@unique([tenantId, userId])
   @@unique([tenantId, id])
@@ -488,6 +495,7 @@ model Product {
   minimumStock    Decimal       @default(0) @db.Decimal(20, 6)
   expiryAlertDays Int           @default(0)
   status          ProductStatus @default(ACTIVE)
+  salePrice       Decimal       @default(0) @db.Decimal(20, 4)
   version         Int           @default(1)
   createdAt       DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
@@ -501,6 +509,7 @@ model Product {
   balances        InventoryBalance[]
   alertRule       AlertRule?
   inventoryAlerts InventoryAlert[]
+  saleItems       SaleItem[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, sku])
@@ -530,6 +539,7 @@ model Lot {
   movements       InventoryMovement[]
   balance         InventoryBalance?
   inventoryAlerts InventoryAlert[]
+  saleItems       SaleItem[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, productId, id])
@@ -622,4 +632,47 @@ model InventoryAlert {
   @@unique([tenantId, id])
   @@index([tenantId, status, type, triggeredAt])
   @@index([tenantId, productId, lotId, type, status])
+}
+
+model Sale {
+  id           String     @id @default(uuid()) @db.Uuid
+  tenantId     String     @db.Uuid
+  membershipId String     @db.Uuid
+  sellerUserId String     @db.Uuid
+  saleNumber   String     @db.VarChar(40)
+  status       SaleStatus @default(COMPLETED)
+  subtotal     Decimal    @db.Decimal(20, 4)
+  total        Decimal    @db.Decimal(20, 4)
+  currency     String     @default("PEN") @db.Char(3)
+  createdAt    DateTime   @default(now()) @db.Timestamptz(3)
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  membership Membership @relation(fields: [tenantId, membershipId], references: [tenantId, id], onDelete: Restrict)
+  seller     User       @relation("SaleSeller", fields: [sellerUserId], references: [id], onDelete: Restrict)
+  items      SaleItem[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, saleNumber])
+  @@index([tenantId, createdAt, id])
+  @@index([tenantId, membershipId, createdAt])
+}
+
+model SaleItem {
+  id        String  @id @default(uuid()) @db.Uuid
+  tenantId  String  @db.Uuid
+  saleId    String  @db.Uuid
+  productId String  @db.Uuid
+  lotId     String? @db.Uuid
+  quantity  Decimal @db.Decimal(20, 6)
+  unitPrice Decimal @db.Decimal(20, 4)
+  lineTotal Decimal @db.Decimal(20, 4)
+
+  sale    Sale    @relation(fields: [tenantId, saleId], references: [tenantId, id], onDelete: Cascade)
+  product Product @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
+  lot     Lot?    @relation(fields: [tenantId, productId, lotId], references: [tenantId, productId, id], onDelete: Restrict)
+
+  @@unique([tenantId, id])
+  @@index([tenantId, saleId])
+  @@index([tenantId, productId])
+  @@index([tenantId, lotId])
 }

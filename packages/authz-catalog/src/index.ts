@@ -22,6 +22,8 @@ export const PERMISSION_CODES = Object.freeze([
   "inventory.movements.write",
   "inventory.alerts.read",
   "inventory.alerts.write",
+  "sales.read",
+  "sales.write",
 ] as const);
 
 export type PermissionCode = (typeof PERMISSION_CODES)[number];
@@ -55,8 +57,15 @@ export const roleCatalog = Object.freeze({
     "inventory.movements.write",
     "inventory.alerts.read",
     "inventory.alerts.write",
+    "sales.read",
+    "sales.write",
   ]),
-  seller: definition("seller", ["inventory.stock.read"]),
+  seller: definition("seller", [
+    "inventory.products.read",
+    "inventory.stock.read",
+    "sales.read",
+    "sales.write",
+  ]),
   inventory_manager: definition("inventory_manager", [
     "inventory.products.read",
     "inventory.products.write",
@@ -68,6 +77,8 @@ export const roleCatalog = Object.freeze({
     "inventory.movements.write",
     "inventory.alerts.read",
     "inventory.alerts.write",
+    "sales.read",
+    "sales.write",
   ]),
 }) satisfies Readonly<Record<RoleCode, RoleDefinition>>;
 

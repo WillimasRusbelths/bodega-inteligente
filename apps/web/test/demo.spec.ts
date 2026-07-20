@@ -38,6 +38,9 @@ describe("BodeGIA MVP browser demo", () => {
     expect(html).toContain("Configuraci&oacute;n de bodega");
     expect(html).toContain("Empleados y roles");
     expect(html).toContain("Guardar configuraci&oacute;n");
+    expect(html).toContain("Ventas r&aacute;pidas");
+    expect(html).toContain("Registrar venta");
+    expect(html).toContain("Historial de ventas");
     expect(html).toContain("Operacion OLTP");
     expect(html).toContain("Data Warehouse / DataMart de Inventario");
     expect(html).toContain("BI/OLAP");
@@ -47,7 +50,7 @@ describe("BodeGIA MVP browser demo", () => {
     expect(html).toContain("dw.dim_product");
     expect(html).toContain("dw.fact_inventory_movement");
     expect(html).toContain("OLTP</span><strong>DataMart dw</strong>");
-    expect(html).toContain("DataMart de Ventas");
+    expect(html).toContain("Ventas avanzadas y pagos complejos");
     expect(html).toContain("Sistema final planificado");
   });
 
@@ -61,6 +64,8 @@ describe("BodeGIA MVP browser demo", () => {
     expect(html).not.toContain("<th>Costo</th>");
     expect(html).not.toContain("Perdida estimada");
     expect(html).not.toContain("Guardar configuraci&oacute;n");
+    expect(html).toContain("Registrar venta");
+    expect(html).toContain("Precio de venta");
     expect(html).toContain("Acceso reservado para due");
   });
 

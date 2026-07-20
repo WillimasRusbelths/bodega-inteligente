@@ -12,6 +12,10 @@ import {
 } from "../modules/access/context/tenant-context.js";
 import { BiController } from "../modules/bi/bi.controller.js";
 import { InventoryBiService } from "../modules/bi/inventory-bi.service.js";
+import {
+  QuickSaleService,
+  type QuickSaleInput,
+} from "../modules/sales/quick-sale.service.js";
 
 const DEFAULT_PORT = 3000;
 
@@ -82,6 +86,8 @@ const ROLE_PERMISSIONS = Object.freeze({
     "inventory.movements.write",
     "inventory.alerts.read",
     "inventory.alerts.write",
+    "sales.read",
+    "sales.write",
   ],
   inventory_manager: [
     "inventory.products.read",
@@ -94,6 +100,8 @@ const ROLE_PERMISSIONS = Object.freeze({
     "inventory.movements.write",
     "inventory.alerts.read",
     "inventory.alerts.write",
+    "sales.read",
+    "sales.write",
   ],
   seller: [
     "inventory.products.read",
@@ -101,6 +109,8 @@ const ROLE_PERMISSIONS = Object.freeze({
     "inventory.stock.read",
     "inventory.movements.read",
     "inventory.alerts.read",
+    "sales.read",
+    "sales.write",
   ],
 });
 
@@ -145,7 +155,30 @@ function statusFromError(error: unknown): number {
   if (error instanceof Error && error.name === "TenantSessionInvalidError") {
     return 401;
   }
+  if (
+    error instanceof Error &&
+    (error.name === "NotFoundError" ||
+      ("code" in error && error.code === "RESOURCE_NOT_FOUND"))
+  ) {
+    return 404;
+  }
   return 500;
+}
+
+function codeFromError(error: unknown, status: number): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    status < 500
+  ) {
+    return error.code;
+  }
+  if (status === 403) return "INSUFFICIENT_PERMISSION";
+  if (status === 401) return "SESSION_INVALID";
+  if (status === 404) return "RESOURCE_NOT_FOUND";
+  return "REQUEST_FAILED";
 }
 
 interface TenantSettingsInput {
@@ -255,6 +288,49 @@ function requiredText(value: unknown, maxLength: number): string {
     throw Object.assign(new Error("INVALID_FIELD"), { status: 400 });
   }
   return trimmed;
+}
+
+function optionalNumber(value: unknown): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw Object.assign(new Error("INVALID_FIELD"), {
+      status: 400,
+      code: "VALIDATION_ERROR",
+    });
+  }
+  return value;
+}
+
+function requiredNumber(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw Object.assign(new Error("INVALID_FIELD"), {
+      status: 400,
+      code: "VALIDATION_ERROR",
+    });
+  }
+  return value;
+}
+
+function quickSaleInput(value: unknown): QuickSaleInput {
+  const body = record(value);
+  const rawItems = body["items"];
+  if (!Array.isArray(rawItems)) {
+    throw Object.assign(new Error("INVALID_FIELD"), {
+      status: 400,
+      code: "VALIDATION_ERROR",
+    });
+  }
+  return {
+    items: rawItems.map((rawItem) => {
+      const item = record(rawItem);
+      const unitPrice = optionalNumber(item["unitPrice"]);
+      return {
+        productId: requiredText(item["productId"], 64),
+        quantity: requiredNumber(item["quantity"]),
+        ...(unitPrice === undefined ? {} : { unitPrice }),
+      };
+    }),
+  };
 }
 
 function tenantSettingsInput(value: unknown): TenantSettingsInput {
@@ -494,10 +570,61 @@ async function handleTenantAdminRoute(
   return false;
 }
 
+async function handleSalesRoute(
+  request: IncomingMessage,
+  response: ServerResponse,
+  service: QuickSaleService,
+): Promise<boolean> {
+  const url = new URL(request.url ?? "/", "http://localhost");
+  const pathname = url.pathname;
+  const context = demoContext(request);
+
+  if (pathname === "/tenants/current/products" && request.method === "GET") {
+    requireDemoSession(request);
+    jsonResponse(response, 200, {
+      data: await service.listProducts(context),
+    });
+    return true;
+  }
+
+  if (pathname === "/tenants/current/sales" && request.method === "POST") {
+    requireDemoSession(request);
+    const input = quickSaleInput(await readJsonBody(request));
+    jsonResponse(response, 201, {
+      data: await service.create(context, input),
+    });
+    return true;
+  }
+
+  if (pathname === "/tenants/current/sales" && request.method === "GET") {
+    requireDemoSession(request);
+    jsonResponse(response, 200, {
+      data: await service.list(context),
+    });
+    return true;
+  }
+
+  const saleDetail = /^\/tenants\/current\/sales\/(?<saleId>[^/]+)$/u.exec(
+    pathname,
+  );
+  if (saleDetail !== null && request.method === "GET") {
+    requireDemoSession(request);
+    const saleId = saleDetail.groups?.["saleId"];
+    if (saleId === undefined) return false;
+    jsonResponse(response, 200, {
+      data: await service.get(context, saleId),
+    });
+    return true;
+  }
+
+  return false;
+}
+
 /** Test/performance HTTP boundary plus the read-only inventory BI demo API. */
 export function createApiServer() {
   const prisma = new PrismaModule();
   const controller = new BiController(new InventoryBiService(prisma));
+  const sales = new QuickSaleService(prisma);
   const server = createServer((request, response) => {
     const id = correlationId(request);
 
@@ -520,6 +647,9 @@ export function createApiServer() {
         handled ? true : handleTenantAdminRoute(request, response, prisma),
       )
       .then((handled) =>
+        handled ? true : handleSalesRoute(request, response, sales),
+      )
+      .then((handled) =>
         handled ? true : handleBiRoute(request, response, controller),
       )
       .then((handled) => {
@@ -537,12 +667,7 @@ export function createApiServer() {
         const status = statusFromError(error);
         jsonResponse(response, status, {
           error: {
-            code:
-              status === 403
-                ? "INSUFFICIENT_PERMISSION"
-                : status === 401
-                  ? "SESSION_INVALID"
-                  : "REQUEST_FAILED",
+            code: codeFromError(error, status),
             message: "No se pudo completar la solicitud.",
             correlationId: id,
           },

@@ -16,6 +16,7 @@ describe("catalog response privacy [T023, T029, FR-006, FR-036]", () => {
       minimumStock: new Prisma.Decimal(0),
       expiryAlertDays: 0,
       status: "ACTIVE",
+      salePrice: new Prisma.Decimal(1),
       version: 1,
       createdAt: new Date("2026-01-01T00:00:00Z"),
       updatedAt: new Date("2026-01-01T00:00:00Z"),

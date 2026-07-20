@@ -50,6 +50,12 @@ por categoria, riesgo de vencimiento, movimientos por tipo y alertas por
 condicion. La valorizacion de inventario se muestra solo para roles
 autorizados.
 
+Las ventas rapidas del Sprint 2 se reflejan en inventario como movimientos
+`SALE_OUT`. Por eso el BI de inventario puede verlas en resumen de movimientos,
+stock disponible y riesgo operativo. Esto no equivale a un DataMart de Ventas:
+hechos como medios de pago, tickets completos, anulaciones, devoluciones y
+rentabilidad de venta quedan para una fase posterior.
+
 ## Relacion con el servicio BI
 
 El servicio BI actual permanece sobre los repositorios y guards tenant-aware del
