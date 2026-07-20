@@ -31,13 +31,14 @@ demo MVP. La API es el unico proceso que usa Prisma.
 
 ### Backend API
 
-| Variable          | Requerida        | Descripcion                                                          |
-| ----------------- | ---------------- | -------------------------------------------------------------------- |
-| `DATABASE_URL`    | Si               | URL PostgreSQL de Supabase o del entorno de pruebas.                 |
-| `NODE_ENV`        | Si               | Usar `production` en Render/Railway.                                 |
-| `PORT`            | Si               | Puerto asignado por Render/Railway. La API lo respeta.               |
-| `CORS_ORIGIN`     | Si en produccion | Origen web permitido, por ejemplo `https://bodegia-demo.vercel.app`. |
-| `ALLOW_DEMO_SEED` | Solo seed demo   | Usar `true` unicamente para cargar datos en una base demo aprobada.  |
+| Variable            | Requerida                 | Descripcion                                                             |
+| ------------------- | ------------------------- | ----------------------------------------------------------------------- |
+| `DATABASE_URL`      | Si                        | URL PostgreSQL de Supabase o del entorno de pruebas.                    |
+| `NODE_ENV`          | Si                        | Usar `production` en Render/Railway.                                    |
+| `PORT`              | Si                        | Puerto asignado por Render/Railway. La API lo respeta.                  |
+| `CORS_ORIGIN`       | Si en produccion          | Origen web permitido, por ejemplo `https://bodegia-demo.vercel.app`.    |
+| `DEMO_AUTH_ENABLED` | Solo despliegue academico | Usar `true` para habilitar `/demo/auth/*` cuando `NODE_ENV=production`. |
+| `ALLOW_DEMO_SEED`   | Solo seed demo            | Usar `true` unicamente para cargar datos en una base demo aprobada.     |
 
 ### Web
 
@@ -170,6 +171,17 @@ Antes de iniciar una version nueva, ejecutar:
 corepack pnpm exec prisma migrate deploy --schema prisma/schema.prisma
 ```
 
+Para la exposicion academica con login demo habilitado en Render/Railway,
+configurar explicitamente:
+
+```text
+DEMO_AUTH_ENABLED=true
+```
+
+Si `NODE_ENV=production` y `DEMO_AUTH_ENABLED` no es exactamente `true`, la API
+mantiene bloqueados `POST /demo/auth/login`, `GET /demo/auth/session` y
+`POST /demo/auth/logout` con respuesta 403.
+
 ## Vercel
 
 Configurar opcion recomendada:
@@ -239,6 +251,7 @@ curl -Method POST https://URL_API/demo/auth/login `
 - [ ] `NODE_ENV=production` configurado en API.
 - [ ] `PORT` provisto por Render/Railway.
 - [ ] `CORS_ORIGIN` apunta a la URL de Vercel.
+- [ ] `DEMO_AUTH_ENABLED=true` definido solo si se usara login demo academico.
 - [ ] `VITE_API_BASE_URL` apunta a la URL publica de la API.
 - [ ] `prisma migrate deploy` ejecutado correctamente.
 - [ ] `prisma generate` ejecutado antes de build/lint/tests en CI.

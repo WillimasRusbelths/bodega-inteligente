@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import type { Server } from "node:http";
+import process from "node:process";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApiServer } from "../../src/http/main.js";
 
@@ -19,6 +20,40 @@ let baseUrl: string;
 interface HttpResult {
   readonly status: number;
   readonly body: unknown;
+}
+
+type DemoAuthEnvKey = "NODE_ENV" | "DEMO_AUTH_ENABLED";
+
+async function withDemoAuthEnvironment(
+  overrides: Readonly<Partial<Record<DemoAuthEnvKey, string | undefined>>>,
+  action: () => Promise<void>,
+): Promise<void> {
+  const previous = {
+    NODE_ENV: process.env["NODE_ENV"],
+    DEMO_AUTH_ENABLED: process.env["DEMO_AUTH_ENABLED"],
+  } satisfies Record<DemoAuthEnvKey, string | undefined>;
+
+  for (const key of Object.keys(overrides) as DemoAuthEnvKey[]) {
+    const value = overrides[key];
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+
+  try {
+    await action();
+  } finally {
+    for (const key of Object.keys(previous) as DemoAuthEnvKey[]) {
+      const value = previous[key];
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
 }
 
 function assertLocalDatabase(value: string | undefined): string {
@@ -195,6 +230,41 @@ afterAll(async () => {
 });
 
 describe("web MVP demo authentication and tenant administration", () => {
+  it("blocks demo login in production when DEMO_AUTH_ENABLED is not true", async () => {
+    await withDemoAuthEnvironment(
+      { NODE_ENV: "production", DEMO_AUTH_ENABLED: undefined },
+      async () => {
+        const result = await request("/demo/auth/login", {
+          method: "POST",
+          body: JSON.stringify({ username: "propietario", pin: "100001" }),
+        });
+
+        expect(result.status).toBe(403);
+        expect(JSON.stringify(result.body)).toContain(
+          "INSUFFICIENT_PERMISSION",
+        );
+      },
+    );
+  });
+
+  it("allows demo login in production when DEMO_AUTH_ENABLED is true", async () => {
+    await withDemoAuthEnvironment(
+      { NODE_ENV: "production", DEMO_AUTH_ENABLED: "true" },
+      async () => {
+        const result = await request("/demo/auth/login", {
+          method: "POST",
+          body: JSON.stringify({ username: "propietario", pin: "100001" }),
+        });
+
+        expect(result.status).toBe(200);
+        expect(JSON.stringify(result.body)).toContain(
+          "demo-web-session-owner_admin",
+        );
+        expect(JSON.stringify(result.body)).toContain("owner_admin");
+      },
+    );
+  });
+
   it("logs in with deterministic demo users and returns active tenant, user and role", async () => {
     const result = await request("/demo/auth/login", {
       method: "POST",

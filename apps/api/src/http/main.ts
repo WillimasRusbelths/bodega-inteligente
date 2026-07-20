@@ -258,7 +258,9 @@ function requireDemoSession(request: IncomingMessage): DemoRole {
 }
 
 function assertDemoAllowed(): void {
-  if (process.env["NODE_ENV"] === "production") {
+  const production = process.env["NODE_ENV"] === "production";
+  const demoAuthEnabled = process.env["DEMO_AUTH_ENABLED"] === "true";
+  if (production && !demoAuthEnabled) {
     throw Object.assign(new Error("DEMO_DISABLED"), { status: 403 });
   }
 }
