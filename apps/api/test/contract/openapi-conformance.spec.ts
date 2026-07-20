@@ -7,8 +7,19 @@ const contractPath = resolve(
   "specs/002-product-inventory-lots/contracts/openapi.yaml",
 );
 
+const extractOpenApiPaths = (yaml: string): string[] =>
+  Array.from(yaml.matchAll(/^ {2}(\/[^:\n]+):$/gmu), (match) => match[1] ?? "");
+
 describe("002 OpenAPI contract conformance", () => {
   const contract = readFileSync(contractPath, "utf8");
+  const pathKeys = extractOpenApiPaths(contract);
+  const allowedBiPaths = [
+    "/tenants/current/bi/inventory-summary",
+    "/tenants/current/bi/stock-by-category",
+    "/tenants/current/bi/expiration-risk",
+    "/tenants/current/bi/movement-summary",
+    "/tenants/current/bi/alerts-summary",
+  ];
 
   it("declares every MVP operation family", () => {
     for (const operationId of [
@@ -25,24 +36,43 @@ describe("002 OpenAPI contract conformance", () => {
       "suggestFefoLots",
       "listInventoryAlerts",
       "resolveInventoryAlert",
+      "getInventorySummary",
+      "getStockByCategory",
+      "getExpirationRisk",
+      "getMovementSummary",
+      "getAlertsSummary",
     ]) {
       expect(contract).toContain(`operationId: ${operationId}`);
     }
   });
 
   it("keeps tenant-scoped paths and forbids out-of-scope route markers", () => {
-    expect(contract).toContain("/tenants/current/products");
-    expect(contract).toContain("/tenants/current/lots");
-    expect(contract).toContain("/tenants/current/alerts/{alertId}/resolve");
+    expect(pathKeys).toContain("/tenants/current/products");
+    expect(pathKeys).toContain("/tenants/current/lots");
+    expect(pathKeys).toContain("/tenants/current/alerts/{alertId}/resolve");
     for (const forbidden of [
       "/sales",
       "/customers",
       "/ocr",
-      "/bi",
       "/offline",
       "/pairing",
+      "/promotions",
+      "/ai",
+      "/replenishment",
     ]) {
-      expect(contract).not.toContain(forbidden);
+      expect(pathKeys.some((path) => path.startsWith(forbidden))).toBe(false);
+    }
+  });
+
+  it("allows BI only through the approved tenant-scoped inventory routes", () => {
+    const biPaths = pathKeys.filter((path) => path.includes("/bi"));
+
+    expect([...biPaths].sort()).toEqual([...allowedBiPaths].sort());
+    expect(pathKeys).not.toContain("/bi");
+    expect(pathKeys).not.toContain("/api/bi");
+    expect(pathKeys).not.toContain("/tenants/{tenantId}/bi");
+    for (const biPath of biPaths) {
+      expect(biPath.startsWith("/tenants/current/bi/")).toBe(true);
     }
   });
 

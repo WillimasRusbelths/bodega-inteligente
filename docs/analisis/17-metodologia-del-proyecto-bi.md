@@ -9,13 +9,13 @@ implementar, probar, documentar y revisar.
 
 ## Comparación Kimball e Inmon
 
-| Criterio | Kimball | Inmon |
-|---|---|---|
-| Punto de partida | Procesos de negocio y DataMarts | Almacén corporativo integrado |
-| Modelo principal | Dimensional | Corporativo, frecuentemente normalizado |
-| Integración | Dimensiones conformadas y matriz bus | Integración central previa |
-| Entrega | Incremental por proceso | Mayor diseño empresarial inicial |
-| Adecuación a BodegIA | Ventas e Inventario pueden aportar valor temprano | Excede el alcance inicial académico |
+| Criterio             | Kimball                                           | Inmon                                   |
+| -------------------- | ------------------------------------------------- | --------------------------------------- |
+| Punto de partida     | Procesos de negocio y DataMarts                   | Almacén corporativo integrado           |
+| Modelo principal     | Dimensional                                       | Corporativo, frecuentemente normalizado |
+| Integración          | Dimensiones conformadas y matriz bus              | Integración central previa              |
+| Entrega              | Incremental por proceso                           | Mayor diseño empresarial inicial        |
+| Adecuación a BodegIA | Ventas e Inventario pueden aportar valor temprano | Excede el alcance inicial académico     |
 
 Se selecciona Kimball porque BodegIA tiene dos procesos analíticos prioritarios y requiere evolución
 incremental sin diseñar anticipadamente DataMarts completos de Clientes, Compras o Proveedores.
@@ -144,20 +144,20 @@ Frecuencia, formato y responsables nominales se fijarán en el plan aprobado.
 
 ## Riesgos principales
 
-| Riesgo | Efecto | Respuesta conceptual |
-|---|---|---|
-| Calidad insuficiente del OLTP | Indicadores incorrectos | Perfilado, reglas, cuarentena y corrección autorizada en origen |
-| Mezcla de tenants | Brecha crítica | Tenant extremo a extremo y pruebas negativas |
-| Grano ambiguo | Doble conteo | Declarar y validar grano antes del diseño físico |
-| Carga parcial | DataMarts inconsistentes | Publicación controlada, punto de corte y reprocesamiento |
-| Fórmulas no acordadas | Métricas contradictorias | Catálogo único, propietario y versionado |
-| Margen estimado tratado como final | Decisión errónea | Indicador obligatorio de estado y filtros visibles |
-| Cantidades imputadas | Falsa exactitud | Ausencia explícita para ventas por importe |
-| Impacto en OLTP | Operación degradada | Extracción incremental y ventana medida |
-| Acceso excesivo de Power BI | Exposición de datos | Solo lectura, mínimo privilegio y seguridad por tenant |
-| Dashboard desactualizado | Decisiones con datos antiguos | Fecha de corte, monitoreo y alerta de frescura |
-| Dependencia de herramienta | Costos o bloqueo | Modelo conceptual independiente y evaluación técnica |
-| Datos personales innecesarios | Riesgo de privacidad | Minimización, enmascaramiento y exclusión del DataMart completo |
+| Riesgo                             | Efecto                        | Respuesta conceptual                                            |
+| ---------------------------------- | ----------------------------- | --------------------------------------------------------------- |
+| Calidad insuficiente del OLTP      | Indicadores incorrectos       | Perfilado, reglas, cuarentena y corrección autorizada en origen |
+| Mezcla de tenants                  | Brecha crítica                | Tenant extremo a extremo y pruebas negativas                    |
+| Grano ambiguo                      | Doble conteo                  | Declarar y validar grano antes del diseño físico                |
+| Carga parcial                      | DataMarts inconsistentes      | Publicación controlada, punto de corte y reprocesamiento        |
+| Fórmulas no acordadas              | Métricas contradictorias      | Catálogo único, propietario y versionado                        |
+| Margen estimado tratado como final | Decisión errónea              | Indicador obligatorio de estado y filtros visibles              |
+| Cantidades imputadas               | Falsa exactitud               | Ausencia explícita para ventas por importe                      |
+| Impacto en OLTP                    | Operación degradada           | Extracción incremental y ventana medida                         |
+| Acceso excesivo de Power BI        | Exposición de datos           | Solo lectura, mínimo privilegio y seguridad por tenant          |
+| Dashboard desactualizado           | Decisiones con datos antiguos | Fecha de corte, monitoreo y alerta de frescura                  |
+| Dependencia de herramienta         | Costos o bloqueo              | Modelo conceptual independiente y evaluación técnica            |
+| Datos personales innecesarios      | Riesgo de privacidad          | Minimización, enmascaramiento y exclusión del DataMart completo |
 
 ## Decisiones pendientes
 

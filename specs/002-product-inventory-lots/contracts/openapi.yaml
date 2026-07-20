@@ -4,7 +4,8 @@ info:
   version: 0.1.0
   description: |
     Contrato REST del núcleo OLTP tenant-scoped para productos, lotes, inventario,
-    FEFO y alertas. Ventas, clientes, OCR y BI no forman parte de este contrato.
+    FEFO, alertas y proyecciones BI de inventario. Ventas, clientes y OCR no
+    forman parte de este contrato.
 servers:
   - url: /api/v1
 tags:
@@ -12,6 +13,7 @@ tags:
   - name: Lots
   - name: Inventory
   - name: Alerts
+  - name: BI
 security:
   - bearerAuth: []
 paths:
@@ -573,6 +575,76 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/ValidationError" }
+  /tenants/current/bi/inventory-summary:
+    get:
+      operationId: getInventorySummary
+      tags: [BI]
+      summary: Resumen OLAP de inventario del tenant activo
+      x-permissions: [inventory.stock.read]
+      responses:
+        "200":
+          description: Indicadores operativos y valorización solo para roles autorizados
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InventoryBiSummaryResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /tenants/current/bi/stock-by-category:
+    get:
+      operationId: getStockByCategory
+      tags: [BI]
+      summary: Stock disponible agrupado por categoría
+      x-permissions: [inventory.stock.read]
+      responses:
+        "200":
+          description: Filas agrupadas y tenant-scoped
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InventoryBiStockByCategoryResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /tenants/current/bi/expiration-risk:
+    get:
+      operationId: getExpirationRisk
+      tags: [BI]
+      summary: Riesgo de vencimiento por lote
+      x-permissions: [inventory.stock.read]
+      responses:
+        "200":
+          description: Lotes próximos a vencer o vencidos sin datos de costos para seller
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InventoryBiExpirationRiskResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /tenants/current/bi/movement-summary:
+    get:
+      operationId: getMovementSummary
+      tags: [BI]
+      summary: Movimientos agrupados por tipo
+      x-permissions: [inventory.movements.read]
+      responses:
+        "200":
+          description: Conteos y cantidades de movimientos del tenant
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InventoryBiMovementSummaryResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /tenants/current/bi/alerts-summary:
+    get:
+      operationId: getAlertsSummary
+      tags: [BI]
+      summary: Alertas agrupadas por tipo y estado
+      x-permissions: [inventory.alerts.read]
+      responses:
+        "200":
+          description: Resumen de alertas tenant-scoped
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InventoryBiAlertsSummaryResponse" }
+        "401": { $ref: "#/components/responses/SessionInvalid" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 components:
   securitySchemes:
     bearerAuth:
@@ -1091,6 +1163,95 @@ components:
             items: { $ref: "#/components/schemas/InventoryAlert" },
           }
         nextCursor: { type: [string, "null"] }
+    InventoryBiSummary:
+      type: object
+      additionalProperties: false
+      required: [totalProducts, totalStockAvailable, lowStockProducts, productsExpiringSoon, productsExpired, activeAlerts]
+      properties:
+        totalProducts: { type: integer, minimum: 0 }
+        totalStockAvailable: { type: number, minimum: 0 }
+        lowStockProducts: { type: integer, minimum: 0 }
+        productsExpiringSoon: { type: integer, minimum: 0 }
+        productsExpired: { type: integer, minimum: 0 }
+        activeAlerts: { type: integer, minimum: 0 }
+        inventoryValuation: { type: number, minimum: 0, x-visibility: [owner_admin, inventory_manager] }
+    InventoryBiSummaryResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: { $ref: "#/components/schemas/InventoryBiSummary" }
+    InventoryBiStockByCategoryRow:
+      type: object
+      additionalProperties: false
+      required: [categoryId, categoryName, stockAvailable, lowStockProducts]
+      properties:
+        categoryId: { type: [string, "null"], format: uuid }
+        categoryName: { type: string }
+        stockAvailable: { type: number, minimum: 0 }
+        lowStockProducts: { type: integer, minimum: 0 }
+        inventoryValuation: { type: number, minimum: 0, x-visibility: [owner_admin, inventory_manager] }
+    InventoryBiStockByCategoryResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/InventoryBiStockByCategoryRow" }
+    InventoryBiExpirationRiskRow:
+      type: object
+      additionalProperties: false
+      required: [lotId, productId, productName, expiresAt, availableQuantity, riskState]
+      properties:
+        lotId: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        productName: { type: string }
+        categoryName: { type: [string, "null"] }
+        expiresAt: { type: string, format: date }
+        availableQuantity: { type: number, minimum: 0 }
+        riskState: { type: string, enum: [EXPIRED, EXPIRING_SOON, OK] }
+        estimatedLoss: { type: number, minimum: 0, x-visibility: [owner_admin, inventory_manager] }
+    InventoryBiExpirationRiskResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/InventoryBiExpirationRiskRow" }
+    InventoryBiMovementSummaryRow:
+      type: object
+      additionalProperties: false
+      required: [type, movementCount, quantity]
+      properties:
+        type: { type: string }
+        movementCount: { type: integer, minimum: 0 }
+        quantity: { type: number, minimum: 0 }
+    InventoryBiMovementSummaryResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/InventoryBiMovementSummaryRow" }
+    InventoryBiAlertsSummaryRow:
+      type: object
+      additionalProperties: false
+      required: [type, status, alertCount]
+      properties:
+        type: { type: string }
+        status: { type: string }
+        alertCount: { type: integer, minimum: 0 }
+    InventoryBiAlertsSummaryResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/InventoryBiAlertsSummaryRow" }
     ErrorResponse:
       type: object
       additionalProperties: false

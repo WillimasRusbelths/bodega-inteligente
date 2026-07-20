@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "start:performance": "node src/http/main.ts"
+    "start:performance": "pnpm build && node dist/src/http/main.js"
   },
   "dependencies": {
     "@bodegia/authz-catalog": "workspace:*",

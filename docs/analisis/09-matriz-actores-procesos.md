@@ -24,36 +24,36 @@ Data Warehouse, DataMarts y disponibilidad, pero no obtiene acceso comercial por
 
 ## Matriz
 
-| Proceso | Propietario administrador | Propietario vendedor | Empleado vendedor | Responsable de inventario | Administrador técnico | Cliente de la bodega | Proveedor | Investigador o desarrollador |
-|---|---|---|---|---|---|---|---|---|
-| PR-001 Configurar una bodega | E | C | N | C | N | N | N | N |
-| PR-002 Gestionar usuarios, pertenencias y permisos | E | C | N | N | N | N | N | N |
-| PR-003 Mantener catálogo y presentaciones | A | C | C | E | N | N | P | N |
-| PR-004 Recibir lote contado o pesado | A | C | N | E | N | N | P | N |
-| PR-005 Recibir lote sin cantidad exacta | A | C | N | E | N | N | P | N |
-| PR-006 Capturar y confirmar vencimiento con OCR | C | N | N | E | N | N | N | N |
-| PR-007 Registrar transformación básica | A | C | N | E | N | N | N | N |
-| PR-008 Registrar ajuste, merma o deterioro | A | C | N | E | N | N | N | N |
-| PR-009 Controlar lotes, vencimientos y FEFO | C | C | C | E | N | N | N | N |
-| PR-010 Registrar venta por unidad | C | E | E | C | N | P | N | N |
-| PR-011 Registrar venta por peso | C | E | E | C | N | P | N | N |
-| PR-012 Registrar venta por importe | C | E | E | C | N | P | N | N |
-| PR-013 Registrar venta con doble modalidad | C | E | E | C | N | P | N | N |
-| PR-014 Registrar cliente identificado | C | E | E | N | N | P | N | N |
-| PR-015 Registrar consentimiento promocional | C | E | E | N | N | P | N | N |
-| PR-016 Registrar venta con Cliente general | C | E | E | C | N | P | N | N |
-| PR-017 Emitir ticket interno | C | E | E | N | N | P | N | N |
-| PR-018 Anular una venta | A | E | N | C | N | P | N | N |
-| PR-019 Cerrar lote vendido por importe | A | C | N | E | N | N | N | N |
-| PR-020 Consultar análisis y preparar reposición | E | C | N | E | N | N | P | N |
+| Proceso                                            | Propietario administrador | Propietario vendedor | Empleado vendedor | Responsable de inventario | Administrador técnico | Cliente de la bodega | Proveedor | Investigador o desarrollador |
+| -------------------------------------------------- | ------------------------- | -------------------- | ----------------- | ------------------------- | --------------------- | -------------------- | --------- | ---------------------------- |
+| PR-001 Configurar una bodega                       | E                         | C                    | N                 | C                         | N                     | N                    | N         | N                            |
+| PR-002 Gestionar usuarios, pertenencias y permisos | E                         | C                    | N                 | N                         | N                     | N                    | N         | N                            |
+| PR-003 Mantener catálogo y presentaciones          | A                         | C                    | C                 | E                         | N                     | N                    | P         | N                            |
+| PR-004 Recibir lote contado o pesado               | A                         | C                    | N                 | E                         | N                     | N                    | P         | N                            |
+| PR-005 Recibir lote sin cantidad exacta            | A                         | C                    | N                 | E                         | N                     | N                    | P         | N                            |
+| PR-006 Capturar y confirmar vencimiento con OCR    | C                         | N                    | N                 | E                         | N                     | N                    | N         | N                            |
+| PR-007 Registrar transformación básica             | A                         | C                    | N                 | E                         | N                     | N                    | N         | N                            |
+| PR-008 Registrar ajuste, merma o deterioro         | A                         | C                    | N                 | E                         | N                     | N                    | N         | N                            |
+| PR-009 Controlar lotes, vencimientos y FEFO        | C                         | C                    | C                 | E                         | N                     | N                    | N         | N                            |
+| PR-010 Registrar venta por unidad                  | C                         | E                    | E                 | C                         | N                     | P                    | N         | N                            |
+| PR-011 Registrar venta por peso                    | C                         | E                    | E                 | C                         | N                     | P                    | N         | N                            |
+| PR-012 Registrar venta por importe                 | C                         | E                    | E                 | C                         | N                     | P                    | N         | N                            |
+| PR-013 Registrar venta con doble modalidad         | C                         | E                    | E                 | C                         | N                     | P                    | N         | N                            |
+| PR-014 Registrar cliente identificado              | C                         | E                    | E                 | N                         | N                     | P                    | N         | N                            |
+| PR-015 Registrar consentimiento promocional        | C                         | E                    | E                 | N                         | N                     | P                    | N         | N                            |
+| PR-016 Registrar venta con Cliente general         | C                         | E                    | E                 | C                         | N                     | P                    | N         | N                            |
+| PR-017 Emitir ticket interno                       | C                         | E                    | E                 | N                         | N                     | P                    | N         | N                            |
+| PR-018 Anular una venta                            | A                         | E                    | N                 | C                         | N                     | P                    | N         | N                            |
+| PR-019 Cerrar lote vendido por importe             | A                         | C                    | N                 | E                         | N                     | N                    | N         | N                            |
+| PR-020 Consultar análisis y preparar reposición    | E                         | C                    | N                 | E                         | N                     | N                    | P         | N                            |
 
 ## Matriz de procesos analíticos
 
-| Proceso | Propietario administrador como consumidor de reportes | Responsable de inventario | Investigador o analista BI | Administrador técnico analítico | Otros usuarios operativos | Cliente | Proveedor |
-|---|---|---|---|---|---|---|---|
-| PR-021 Extraer y cargar información analítica | C | C | Participa | Ejecuta | No tiene acceso | No tiene acceso | No tiene acceso |
-| PR-022 Generar indicadores BI | Autoriza/Consulta | Participa/Consulta | Ejecuta | Participa | No tiene acceso por defecto | No tiene acceso | No tiene acceso |
-| PR-023 Consultar dashboard BI | Ejecuta/Consulta | Consulta según permiso | Participa | No tiene acceso comercial por defecto | Consulta solo si su rol lo permite | No tiene acceso | No tiene acceso |
+| Proceso                                       | Propietario administrador como consumidor de reportes | Responsable de inventario | Investigador o analista BI | Administrador técnico analítico       | Otros usuarios operativos          | Cliente         | Proveedor       |
+| --------------------------------------------- | ----------------------------------------------------- | ------------------------- | -------------------------- | ------------------------------------- | ---------------------------------- | --------------- | --------------- |
+| PR-021 Extraer y cargar información analítica | C                                                     | C                         | Participa                  | Ejecuta                               | No tiene acceso                    | No tiene acceso | No tiene acceso |
+| PR-022 Generar indicadores BI                 | Autoriza/Consulta                                     | Participa/Consulta        | Ejecuta                    | Participa                             | No tiene acceso por defecto        | No tiene acceso | No tiene acceso |
+| PR-023 Consultar dashboard BI                 | Ejecuta/Consulta                                      | Consulta según permiso    | Participa                  | No tiene acceso comercial por defecto | Consulta solo si su rol lo permite | No tiene acceso | No tiene acceso |
 
 En PR-021, **Consulta** para actores de negocio significa revisar conciliación o calidad autorizada,
 no operar el ETL. La autorización de una métrica expresa validación de negocio y no permite modificar
