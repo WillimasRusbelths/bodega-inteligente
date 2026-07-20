@@ -1,4 +1,4 @@
-import { renderBodegiaMvpDemo } from "./mvp-demo.js";
+import { renderBodegiaDashboard, renderDemoLogin } from "./mvp-demo.js";
 import type { InventoryWebRole } from "../api/inventory-client.js";
 
 const roles = new Set<InventoryWebRole>([
@@ -15,14 +15,41 @@ function selectedRole(): InventoryWebRole {
     : "owner_admin";
 }
 
-function mount(role: InventoryWebRole): void {
+function root(): HTMLDivElement {
   const app = document.querySelector<HTMLDivElement>("#app");
   if (app === null) throw new Error("DEMO_ROOT_NOT_FOUND");
-  app.innerHTML = renderBodegiaMvpDemo(role);
-  document.querySelector("#demo-role")?.addEventListener("change", (event) => {
-    const value = (event.target as HTMLSelectElement).value;
-    if (roles.has(value as InventoryWebRole)) mount(value as InventoryWebRole);
-  });
+  return app;
 }
 
-mount(selectedRole());
+function chosenRole(fallback: InventoryWebRole): InventoryWebRole {
+  const selected = document.querySelector<HTMLInputElement>(
+    'input[name="demo-role-card"]:checked',
+  );
+  const value = selected?.value;
+  return roles.has(value as InventoryWebRole)
+    ? (value as InventoryWebRole)
+    : fallback;
+}
+
+function mountLogin(role: InventoryWebRole): void {
+  root().innerHTML = renderDemoLogin(role);
+  document.querySelector("#enter-dashboard")?.addEventListener("click", () => {
+    mountDashboard(chosenRole(role));
+  });
+  document
+    .querySelectorAll<HTMLInputElement>('input[name="demo-role-card"]')
+    .forEach((input) => {
+      input.addEventListener("change", () => {
+        mountLogin(chosenRole(role));
+      });
+    });
+}
+
+function mountDashboard(role: InventoryWebRole): void {
+  root().innerHTML = renderBodegiaDashboard(role);
+  document
+    .querySelector("#change-demo-user")
+    ?.addEventListener("click", () => mountLogin(role));
+}
+
+mountLogin(selectedRole());
