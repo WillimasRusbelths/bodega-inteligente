@@ -13,7 +13,14 @@ import type {
   MovementSummaryRow,
   StockByCategoryRow,
 } from "../features/bi/inventory-bi-client.js";
+import { SafeWebApiError } from "../api/client.js";
 import { unwrapApiData } from "../api/operational-data-adapter.js";
+import { OperationalDashboardController } from "../features/dashboard/operational-dashboard-controller.js";
+import type {
+  OperationalDashboardState,
+  ResourceState,
+  WebSessionContext,
+} from "../features/dashboard/operational-dashboard-state.js";
 import {
   renderBodegiaDashboard,
   renderDemoLogin,
@@ -38,7 +45,13 @@ declare global {
   }
 }
 
-type ApiError = { readonly error: { readonly code: string; readonly message: string; readonly correlationId: string } };
+type ApiError = {
+  readonly error: {
+    readonly code: string;
+    readonly message: string;
+    readonly correlationId: string;
+  };
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
@@ -94,15 +107,17 @@ async function readApi<T>(
     },
   });
   const payload = (await response.json()) as unknown;
-  const error = isRecord(payload) && "error" in payload
-    ? (payload as ApiError).error
-    : undefined;
+  const error =
+    isRecord(payload) && "error" in payload
+      ? (payload as ApiError).error
+      : undefined;
   if (!response.ok || error !== undefined) {
-    const message =
-      error !== undefined
-        ? `${error.code} (${error.correlationId})`
-        : "REQUEST_FAILED";
-    throw new Error(message);
+    throw new SafeWebApiError({
+      status: response.status,
+      code: error?.code ?? "REQUEST_FAILED",
+      correlationId:
+        error?.correlationId ?? response.headers.get("x-correlation-id"),
+    });
   }
   return unwrapApiData<T>(payload);
 }
@@ -120,33 +135,188 @@ interface OperationalProductResponse {
   readonly items: readonly Product[];
   readonly data: readonly QuickSaleProduct[];
 }
-interface Page<T> { readonly items: readonly T[]; readonly nextCursor: string | null; }
-interface LoadedDashboard { readonly salesData: QuickSalesDashboardData; readonly operationalData: OperationalDashboardData; }
+interface Page<T> {
+  readonly items: readonly T[];
+  readonly nextCursor: string | null;
+}
+interface OperationalIndicators {
+  readonly summary: InventorySummary;
+  readonly stockByCategory: readonly StockByCategoryRow[];
+  readonly expirationRisk: readonly ExpirationRiskRow[];
+  readonly movementSummary: readonly MovementSummaryRow[];
+  readonly alertsSummary: readonly AlertSummaryRow[];
+}
+type BrowserDashboardResources = {
+  readonly products: OperationalProductResponse;
+  readonly lots: readonly Lot[];
+  readonly balances: readonly InventoryBalance[];
+  readonly movements: readonly InventoryMovement[];
+  readonly alerts: readonly InventoryAlert[];
+  readonly sales: readonly QuickSaleRecord[];
+  readonly indicators: OperationalIndicators;
+};
+type BrowserDashboardState =
+  OperationalDashboardState<BrowserDashboardResources>;
+type BrowserDashboardController =
+  OperationalDashboardController<BrowserDashboardResources>;
+interface LoadedDashboard {
+  readonly controller: BrowserDashboardController;
+  readonly state: BrowserDashboardState;
+  readonly salesData: QuickSalesDashboardData;
+  readonly operationalData: OperationalDashboardData;
+}
 
-/** Reads the active tenant aggregate; the API remains the sole stock authority. */
-async function loadOperationalDashboard(session: DemoWebSession): Promise<LoadedDashboard> {
-  const [products, lots, balances, movements, alerts, sales, summary, stockByCategory, expirationRisk, movementSummary, alertsSummary] = await Promise.all([
-    readApi<OperationalProductResponse>("/tenants/current/products", session.sessionId),
-    readApi<Page<Lot>>("/tenants/current/lots", session.sessionId),
-    readApi<Page<InventoryBalance>>("/tenants/current/inventory/balances", session.sessionId),
-    readApi<Page<InventoryMovement>>("/tenants/current/inventory/movements", session.sessionId),
-    readApi<Page<InventoryAlert>>("/tenants/current/inventory/alerts", session.sessionId),
-    readApi<readonly QuickSaleRecord[]>("/tenants/current/sales", session.sessionId),
-    readApi<InventorySummary>("/tenants/current/bi/inventory-summary", session.sessionId),
-    readApi<readonly StockByCategoryRow[]>("/tenants/current/bi/stock-by-category", session.sessionId),
-    readApi<readonly ExpirationRiskRow[]>("/tenants/current/bi/expiration-risk", session.sessionId),
-    readApi<readonly MovementSummaryRow[]>("/tenants/current/bi/movement-summary", session.sessionId),
-    readApi<readonly AlertSummaryRow[]>("/tenants/current/bi/alerts-summary", session.sessionId),
-  ]);
+const emptyIndicators: OperationalIndicators = {
+  summary: {
+    totalProducts: 0,
+    totalStockAvailable: 0,
+    lowStockProducts: 0,
+    productsExpiringSoon: 0,
+    productsExpired: 0,
+    activeAlerts: 0,
+  },
+  stockByCategory: [],
+  expirationRisk: [],
+  movementSummary: [],
+  alertsSummary: [],
+};
+
+function sessionContext(session: DemoWebSession): WebSessionContext {
   return {
-    salesData: { products: products.data, sales },
+    sessionId: session.sessionId,
+    tenantId: session.tenant.id,
+    membershipId: session.membership.id,
+    capabilities: [],
+  };
+}
+
+function resourceData<T>(state: ResourceState<T>, fallback: T): T {
+  return state.status === "ready" || state.status === "stale"
+    ? state.data
+    : fallback;
+}
+
+function dashboardFromState(
+  controller: BrowserDashboardController,
+  state: BrowserDashboardState,
+  role: InventoryWebRole,
+): LoadedDashboard {
+  const products = resourceData(state.resources.products, {
+    items: [],
+    data: [],
+  });
+  const indicators = resourceData(state.resources.indicators, emptyIndicators);
+  return {
+    controller,
+    state,
+    salesData: {
+      products: products.data,
+      sales: resourceData(state.resources.sales, []),
+    },
     operationalData: {
-      role: session.membership.role, products: products.items, lots: lots.items,
-      balances: balances.items, movements: movements.items, alerts: alerts.items,
-      fefo: { productId: "", requestedQuantity: 0, canFulfill: false, items: [] },
-      bi: { summary, stockByCategory, expirationRisk, movementSummary, alertsSummary },
+      role,
+      products: products.items,
+      lots: resourceData(state.resources.lots, []),
+      balances: resourceData(state.resources.balances, []),
+      movements: resourceData(state.resources.movements, []),
+      alerts: resourceData(state.resources.alerts, []),
+      fefo: {
+        productId: "",
+        requestedQuantity: 0,
+        canFulfill: false,
+        items: [],
+      },
+      bi: indicators,
     },
   };
+}
+
+/** Reads the active tenant aggregate; the API remains the sole stock authority. */
+async function loadOperationalDashboard(
+  session: DemoWebSession,
+): Promise<LoadedDashboard> {
+  const controller =
+    new OperationalDashboardController<BrowserDashboardResources>({
+      products: ({ context, signal }) =>
+        readApi<OperationalProductResponse>(
+          "/tenants/current/products",
+          context.sessionId,
+          { signal },
+        ),
+      lots: ({ context, signal }) =>
+        readApi<Page<Lot>>("/tenants/current/lots", context.sessionId, {
+          signal,
+        }).then((page) => page.items),
+      balances: ({ context, signal }) =>
+        readApi<Page<InventoryBalance>>(
+          "/tenants/current/inventory/balances",
+          context.sessionId,
+          { signal },
+        ).then((page) => page.items),
+      movements: ({ context, signal }) =>
+        readApi<Page<InventoryMovement>>(
+          "/tenants/current/inventory/movements",
+          context.sessionId,
+          { signal },
+        ).then((page) => page.items),
+      alerts: ({ context, signal }) =>
+        readApi<Page<InventoryAlert>>(
+          "/tenants/current/inventory/alerts",
+          context.sessionId,
+          { signal },
+        ).then((page) => page.items),
+      sales: ({ context, signal }) =>
+        readApi<readonly QuickSaleRecord[]>(
+          "/tenants/current/sales",
+          context.sessionId,
+          { signal },
+        ),
+      indicators: async ({ context, signal }) => {
+        const [
+          summary,
+          stockByCategory,
+          expirationRisk,
+          movementSummary,
+          alertsSummary,
+        ] = await Promise.all([
+          readApi<InventorySummary>(
+            "/tenants/current/bi/inventory-summary",
+            context.sessionId,
+            { signal },
+          ),
+          readApi<readonly StockByCategoryRow[]>(
+            "/tenants/current/bi/stock-by-category",
+            context.sessionId,
+            { signal },
+          ),
+          readApi<readonly ExpirationRiskRow[]>(
+            "/tenants/current/bi/expiration-risk",
+            context.sessionId,
+            { signal },
+          ),
+          readApi<readonly MovementSummaryRow[]>(
+            "/tenants/current/bi/movement-summary",
+            context.sessionId,
+            { signal },
+          ),
+          readApi<readonly AlertSummaryRow[]>(
+            "/tenants/current/bi/alerts-summary",
+            context.sessionId,
+            { signal },
+          ),
+        ]);
+        return {
+          summary,
+          stockByCategory,
+          expirationRisk,
+          movementSummary,
+          alertsSummary,
+        };
+      },
+    });
+  const state = await controller.load(sessionContext(session));
+  if (state === null) throw new Error("DASHBOARD_CONTEXT_CHANGED");
+  return dashboardFromState(controller, state, session.membership.role);
 }
 
 function setLoginError(message: string): void {
@@ -180,7 +350,10 @@ async function login(role: InventoryWebRole): Promise<void> {
       session.sessionId,
     );
     const sessionWithEmployees = await loadEmployees(session);
-    mountDashboard(sessionWithEmployees, await loadOperationalDashboard(session));
+    mountDashboard(
+      sessionWithEmployees,
+      await loadOperationalDashboard(session),
+    );
   } catch (error) {
     const suffix = error instanceof Error ? ` ${error.message}` : "";
     setLoginError(
@@ -270,12 +443,37 @@ function bindSettings(session: DemoWebSession): void {
     });
 }
 
-function bindDashboard(session: DemoWebSession): void {
+function bindDashboard(session: DemoWebSession, data: LoadedDashboard): void {
   document
     .querySelector("#logout-demo-user")
     ?.addEventListener("click", () => void logout(session));
   bindSettings(session);
-  bindQuickSale(session);
+  bindQuickSale(session, data);
+  bindPostSaleRetry(session, data);
+}
+
+function bindPostSaleRetry(
+  session: DemoWebSession,
+  dashboard: LoadedDashboard,
+): void {
+  document
+    .querySelector<HTMLButtonElement>("#retry-post-sale-refresh")
+    ?.addEventListener("click", (event) => {
+      const button = event.currentTarget;
+      if (!(button instanceof HTMLButtonElement)) return;
+      button.disabled = true;
+      void dashboard.controller.retryStale().then((state) => {
+        if (state === null) return;
+        mountDashboard(
+          session,
+          dashboardFromState(
+            dashboard.controller,
+            state,
+            session.membership.role,
+          ),
+        );
+      });
+    });
 }
 
 function selectedQuickSaleOption(): HTMLOptionElement | null {
@@ -310,7 +508,10 @@ function updateQuickSaleTotal(): void {
   }
 }
 
-function bindQuickSale(session: DemoWebSession): void {
+function bindQuickSale(
+  session: DemoWebSession,
+  dashboard: LoadedDashboard,
+): void {
   const product = document.querySelector<HTMLSelectElement>(
     "#quick-sale-product",
   );
@@ -334,30 +535,47 @@ function bindQuickSale(session: DemoWebSession): void {
       const form = event.currentTarget;
       if (!(form instanceof HTMLFormElement)) return;
       const result = document.querySelector<HTMLElement>("#quick-sale-result");
+      const submit = form.querySelector<HTMLButtonElement>(
+        'button[type="submit"]',
+      );
       const data = new FormData(form);
-      void readApi<QuickSaleRecord>(
-        "/tenants/current/sales",
-        session.sessionId,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            items: [
+      const idempotencyKey = globalThis.crypto.randomUUID();
+      if (submit !== null) submit.disabled = true;
+      void dashboard.controller
+        .submitSale({
+          idempotencyKey,
+          create: () =>
+            readApi<QuickSaleRecord>(
+              "/tenants/current/sales",
+              session.sessionId,
               {
-                productId: formText(data, "productId"),
-                quantity: Number(formText(data, "quantity")),
-                unitPrice: Number(formText(data, "unitPrice")),
+                method: "POST",
+                headers: { "Idempotency-Key": idempotencyKey },
+                body: JSON.stringify({
+                  items: [
+                    {
+                      productId: formText(data, "productId"),
+                      quantity: Number(formText(data, "quantity")),
+                      unitPrice: Number(formText(data, "unitPrice")),
+                    },
+                  ],
+                }),
               },
-            ],
-          }),
-        },
-      )
-        .then((sale) => {
-          if (result !== null) {
-            result.textContent = `Venta ${sale.saleNumber} registrada.`;
-          }
-          void reloadDashboard(session);
+            ),
+        })
+        .then((state) => {
+          if (state === null) return;
+          mountDashboard(
+            session,
+            dashboardFromState(
+              dashboard.controller,
+              state,
+              session.membership.role,
+            ),
+          );
         })
         .catch((error: unknown) => {
+          if (submit !== null) submit.disabled = false;
           if (result !== null) {
             result.textContent =
               error instanceof Error
@@ -372,17 +590,15 @@ async function reloadDashboard(session: DemoWebSession): Promise<void> {
   mountDashboard(session, await loadOperationalDashboard(session));
 }
 
-function mountDashboard(
-  session: DemoWebSession,
-  data: LoadedDashboard,
-): void {
+function mountDashboard(session: DemoWebSession, data: LoadedDashboard): void {
   root().innerHTML = renderBodegiaDashboard(
     session.membership.role,
     session,
     data.salesData,
     data.operationalData,
+    { sale: data.state.sale, resources: data.state.resources },
   );
-  bindDashboard(session);
+  bindDashboard(session, data);
 }
 
 async function restoreSession(role: InventoryWebRole): Promise<void> {
@@ -397,7 +613,10 @@ async function restoreSession(role: InventoryWebRole): Promise<void> {
       sessionId,
     );
     const sessionWithEmployees = await loadEmployees(session);
-    mountDashboard(sessionWithEmployees, await loadOperationalDashboard(session));
+    mountDashboard(
+      sessionWithEmployees,
+      await loadOperationalDashboard(session),
+    );
   } catch {
     globalThis.sessionStorage.removeItem("BODEGIA_DEMO_SESSION");
     mountLogin(role);

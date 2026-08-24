@@ -2,8 +2,10 @@ import {
   operationalBalance,
   operationalLot,
   type InventoryAlert,
+  type InventoryBalance,
   type InventoryMovement,
   type InventoryWebRole,
+  type FefoResult,
   type Lot,
   type Product,
 } from "../api/inventory-client.js";
@@ -14,6 +16,10 @@ import type {
   MovementSummaryRow,
   StockByCategoryRow,
 } from "../features/bi/inventory-bi-client.js";
+import type {
+  ResourceState,
+  SaleMutationState,
+} from "../features/dashboard/operational-dashboard-state.js";
 
 export interface DemoTenantSession {
   readonly id: string;
@@ -90,15 +96,31 @@ export interface QuickSalesDashboardData {
   readonly sales: readonly QuickSaleRecord[];
 }
 
+export type DashboardResourceName =
+  | "products"
+  | "lots"
+  | "balances"
+  | "movements"
+  | "alerts"
+  | "sales"
+  | "indicators";
+
+export interface DashboardSynchronizationView {
+  readonly sale: SaleMutationState;
+  readonly resources: Readonly<
+    Record<DashboardResourceName, ResourceState<unknown>>
+  >;
+}
+
 /** Data received from existing tenant-scoped API reads, never from a fixture. */
 export interface OperationalDashboardData {
   readonly role: InventoryWebRole;
   readonly products: readonly Product[];
   readonly lots: readonly Lot[];
-  readonly balances: readonly import("../api/inventory-client.js").InventoryBalance[];
+  readonly balances: readonly InventoryBalance[];
   readonly movements: readonly InventoryMovement[];
   readonly alerts: readonly InventoryAlert[];
-  readonly fefo: import("../api/inventory-client.js").FefoResult;
+  readonly fefo: FefoResult;
   readonly bi: {
     readonly summary: InventorySummary;
     readonly stockByCategory: readonly StockByCategoryRow[];
@@ -154,6 +176,90 @@ function canSell(role: InventoryWebRole): boolean {
   return (
     role === "owner_admin" || role === "inventory_manager" || role === "seller"
   );
+}
+
+const resourceLabels: Readonly<Record<DashboardResourceName, string>> = {
+  products: "catálogo y stock",
+  lots: "lotes",
+  balances: "balances",
+  movements: "movimientos",
+  alerts: "alertas",
+  sales: "ventas",
+  indicators: "indicadores",
+};
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return value !== null && typeof value === "object";
+}
+
+function confirmedSaleNumber(sale: unknown): string | null {
+  if (!isRecord(sale)) return null;
+  const saleNumber = sale["saleNumber"];
+  return typeof saleNumber === "string" ? saleNumber : null;
+}
+
+function unsynchronizedResources(
+  synchronization: DashboardSynchronizationView,
+): DashboardResourceName[] {
+  return (
+    Object.keys(synchronization.resources) as DashboardResourceName[]
+  ).filter((key) => {
+    const status = synchronization.resources[key].status;
+    return status === "stale" || status === "error";
+  });
+}
+
+function resourceCorrelation(state: ResourceState<unknown>): string | null {
+  return state.status === "stale" || state.status === "error"
+    ? state.correlationId
+    : null;
+}
+
+function renderSurfaceState(
+  synchronization: DashboardSynchronizationView | undefined,
+  resources: readonly DashboardResourceName[],
+  surface: string,
+): string {
+  if (synchronization === undefined) return "";
+  const stale = resources.filter((key) => {
+    const status = synchronization.resources[key].status;
+    return status === "stale" || status === "error";
+  });
+  if (stale.length === 0) return "";
+  return `<p class="surface-stale" role="status" data-surface="${escapeHtml(surface)}">${escapeHtml(surface)} contiene datos no sincronizados: ${stale.map((key) => escapeHtml(resourceLabels[key])).join(", ")}.</p>`;
+}
+
+function renderPostSaleSynchronization(
+  synchronization: DashboardSynchronizationView | undefined,
+): string {
+  if (synchronization === undefined || synchronization.sale.status === "idle") {
+    return "";
+  }
+  if (synchronization.sale.status === "submitting") {
+    return '<aside class="sale-synchronization" role="status">Registrando venta. Evita volver a enviarla.</aside>';
+  }
+  if (synchronization.sale.status === "error") {
+    const correlation = synchronization.sale.correlationId;
+    return `<aside class="sale-synchronization form-error" role="alert">${escapeHtml(synchronization.sale.message)}${correlation === null ? "" : ` Correlaci&oacute;n: ${escapeHtml(correlation)}.`}</aside>`;
+  }
+
+  const saleNumber = confirmedSaleNumber(synchronization.sale.sale);
+  const stale = unsynchronizedResources(synchronization);
+  const confirmation = `Venta${saleNumber === null ? "" : ` ${escapeHtml(saleNumber)}`} confirmada.`;
+  if (stale.length === 0) {
+    return `<aside class="sale-synchronization" role="status">${confirmation} Datos operativos actualizados.</aside>`;
+  }
+  const items = stale
+    .map((key) => {
+      const correlation = resourceCorrelation(synchronization.resources[key]);
+      return `<li>${escapeHtml(resourceLabels[key])}${correlation === null ? "" : ` &middot; correlaci&oacute;n ${escapeHtml(correlation)}`}</li>`;
+    })
+    .join("");
+  return `<aside class="sale-synchronization is-stale" role="status">
+    <p>${confirmation} Algunos datos no pudieron sincronizarse.</p>
+    <ul aria-label="Recursos no sincronizados">${items}</ul>
+    <button id="retry-post-sale-refresh" class="secondary-action" type="button">Reintentar actualizaci&oacute;n</button>
+  </aside>`;
 }
 
 function defaultSession(role: InventoryWebRole): DemoWebSession {
@@ -217,15 +323,34 @@ function defaultSession(role: InventoryWebRole): DemoWebSession {
   };
 }
 
-function emptyQuickSalesData(): QuickSalesDashboardData { return { products: [], sales: [] }; }
+function emptyQuickSalesData(): QuickSalesDashboardData {
+  return { products: [], sales: [] };
+}
 
-export function emptyOperationalDashboardData(role: InventoryWebRole): OperationalDashboardData {
+export function emptyOperationalDashboardData(
+  role: InventoryWebRole,
+): OperationalDashboardData {
   return {
-    role, products: [], lots: [], balances: [], movements: [], alerts: [],
+    role,
+    products: [],
+    lots: [],
+    balances: [],
+    movements: [],
+    alerts: [],
     fefo: { productId: "", requestedQuantity: 0, canFulfill: false, items: [] },
     bi: {
-      summary: { totalProducts: 0, totalStockAvailable: 0, lowStockProducts: 0, productsExpiringSoon: 0, productsExpired: 0, activeAlerts: 0 },
-      stockByCategory: [], expirationRisk: [], movementSummary: [], alertsSummary: [],
+      summary: {
+        totalProducts: 0,
+        totalStockAvailable: 0,
+        lowStockProducts: 0,
+        productsExpiringSoon: 0,
+        productsExpired: 0,
+        activeAlerts: 0,
+      },
+      stockByCategory: [],
+      expirationRisk: [],
+      movementSummary: [],
+      alertsSummary: [],
     },
   };
 }
@@ -324,7 +449,10 @@ function renderSidebar(): string {
   </aside>`;
 }
 
-function renderExecutiveSummary(data: OperationalDashboardData): string {
+function renderExecutiveSummary(
+  data: OperationalDashboardData,
+  synchronization?: DashboardSynchronizationView,
+): string {
   const summary = data.bi.summary;
   const valuation = canSeeValuation(data.role)
     ? metricCard(
@@ -335,6 +463,7 @@ function renderExecutiveSummary(data: OperationalDashboardData): string {
     : "";
   return `<section id="inicio" class="panel" aria-labelledby="inicio-title">
     <div class="section-heading"><span class="eyebrow">Inicio</span><h2 id="inicio-title">Resumen ejecutivo</h2><p>Indicadores principales para decidir que revisar primero.</p></div>
+    ${renderSurfaceState(synchronization, ["indicators"], "Resumen ejecutivo")}
     <div class="kpi-grid">
       ${metricCard("Total de productos", summary.totalProducts)}
       ${metricCard("Stock disponible", summary.totalStockAvailable)}
@@ -423,6 +552,7 @@ function quickSaleHistoryRows(sales: readonly QuickSaleRecord[]): string {
 function renderQuickSales(
   session: DemoWebSession,
   salesData: QuickSalesDashboardData,
+  synchronization?: DashboardSynchronizationView,
 ): string {
   if (!canSell(session.membership.role)) {
     return `<section id="ventas" class="panel locked-panel" aria-labelledby="ventas-title">
@@ -432,6 +562,7 @@ function renderQuickSales(
   const firstProduct = salesData.products[0];
   return `<section id="ventas" class="panel" aria-labelledby="ventas-title">
     <div class="section-heading"><span class="eyebrow">Ventas</span><h2 id="ventas-title">Ventas r&aacute;pidas</h2><p>Flujo MVP: seleccionar producto, cantidad, precio, descontar stock por FEFO y guardar historial.</p></div>
+    ${renderSurfaceState(synchronization, ["products", "sales"], "Ventas r&aacute;pidas")}
     <div class="content-grid two-columns">
       <article class="card">
         <h3>Registrar venta</h3>
@@ -450,6 +581,7 @@ function renderQuickSales(
         <div class="table-wrap"><table><thead><tr><th>Venta</th><th>Producto</th><th>Cantidad</th><th>Total</th><th>Estado</th></tr></thead><tbody>${quickSaleHistoryRows(salesData.sales)}</tbody></table></div>
       </article>
     </div>
+    ${renderPostSaleSynchronization(synchronization)}
   </section>`;
 }
 
@@ -491,7 +623,10 @@ function alertRows(alerts: readonly InventoryAlert[]): string {
     .join("");
 }
 
-function renderOltp(data: OperationalDashboardData): string {
+function renderOltp(
+  data: OperationalDashboardData,
+  synchronization?: DashboardSynchronizationView,
+): string {
   const lots = data.lots.map((lot) => operationalLot(lot, data.role));
   const balances = data.balances.map((balance) =>
     operationalBalance(balance, data.role),
@@ -502,6 +637,7 @@ function renderOltp(data: OperationalDashboardData): string {
   const costHeader = canSeeValuation(data.role) ? "<th>Costo</th>" : "";
   return `<section id="oltp" class="panel" aria-labelledby="oltp-title">
     <div class="section-heading"><span class="eyebrow">Operacion OLTP</span><h2 id="oltp-title">Operacion diaria de inventario</h2><p>OLTP registra las operaciones diarias de la bodega.</p></div>
+    ${renderSurfaceState(synchronization, ["products", "lots", "balances", "movements", "alerts"], "Operaci&oacute;n de inventario")}
     <div class="summary-strip">
       <span>${data.products.length} productos</span>
       <span>${categories.size} categorias</span>
@@ -551,7 +687,10 @@ function renderWarehouse(): string {
   </section>`;
 }
 
-function renderBi(data: OperationalDashboardData): string {
+function renderBi(
+  data: OperationalDashboardData,
+  synchronization?: DashboardSynchronizationView,
+): string {
   const maxStock = Math.max(
     ...data.bi.stockByCategory.map((row) => row.stockAvailable),
     1,
@@ -580,6 +719,7 @@ function renderBi(data: OperationalDashboardData): string {
     : "";
   return `<section id="bi" class="panel" aria-labelledby="bi-title">
     <div class="section-heading"><span class="eyebrow">BI/OLAP</span><h2 id="bi-title">Dashboard analitico de inventario</h2><p>OLAP permite analizar datos agregados para tomar decisiones.</p></div>
+    ${renderSurfaceState(synchronization, ["indicators"], "Indicadores BI")}
     <div class="kpi-grid compact">
       ${metricCard("Productos", data.bi.summary.totalProducts)}
       ${metricCard("Stock disponible", data.bi.summary.totalStockAvailable)}
@@ -644,19 +784,22 @@ export function renderBodegiaDashboard(
   role: InventoryWebRole = "owner_admin",
   session: DemoWebSession = defaultSession(role),
   salesData: QuickSalesDashboardData = emptyQuickSalesData(),
-  operationalData: OperationalDashboardData = emptyOperationalDashboardData(role),
+  operationalData: OperationalDashboardData = emptyOperationalDashboardData(
+    role,
+  ),
+  synchronization?: DashboardSynchronizationView,
 ): string {
   return `<div class="app-shell" data-testid="demo-dashboard" data-role="${role}" data-session="${escapeHtml(session.sessionId)}">
     ${renderSidebar()}
     <main class="dashboard-main">
       ${renderTopbar(operationalData.role, session)}
-      ${renderExecutiveSummary(operationalData)}
+      ${renderExecutiveSummary(operationalData, synchronization)}
       ${renderTenantSettings(session)}
       ${renderEmployees(session)}
-      ${renderQuickSales(session, salesData)}
-      ${renderOltp(operationalData)}
+      ${renderQuickSales(session, salesData, synchronization)}
+      ${renderOltp(operationalData, synchronization)}
       ${renderWarehouse()}
-      ${renderBi(operationalData)}
+      ${renderBi(operationalData, synchronization)}
       ${renderRoles()}
       ${renderRoadmap()}
     </main>
