@@ -7,6 +7,7 @@ interface OperationalDataAdapter {
     readonly id: string;
     readonly availableStock: number;
   }[];
+  unwrapApiData<T>(input: unknown): T;
 }
 
 async function loadAdapter(): Promise<OperationalDataAdapter> {
@@ -17,12 +18,15 @@ async function loadAdapter(): Promise<OperationalDataAdapter> {
     throw new Error("[T020] operational-data-adapter is required by T015.");
   }
   const module = (await import(pathToFileURL(modulePath).href)) as Partial<OperationalDataAdapter>;
-  if (module.normalizeOperationalProducts === undefined) {
+  if (module.normalizeOperationalProducts === undefined || module.unwrapApiData === undefined) {
     throw new Error(
-      "[T020] normalizeOperationalProducts export is required by T015.",
+      "[T020/T025] operational response adapters are required.",
     );
   }
-  return { normalizeOperationalProducts: module.normalizeOperationalProducts };
+  return {
+    normalizeOperationalProducts: module.normalizeOperationalProducts,
+    unwrapApiData: module.unwrapApiData,
+  };
 }
 
 const salesSummary = {
@@ -70,5 +74,19 @@ describe("operational data adapter [T015]", () => {
     expect(() => adapter.normalizeOperationalProducts({ data: { items: [] } })).toThrow(
       "INVALID_OPERATIONAL_DATA",
     );
+  });
+
+  it("preserves the combined products envelope while unwrapping ordinary data responses", async () => {
+    const adapter = await loadAdapter();
+    const combined = {
+      items: [{ id: salesSummary.id, availableStock: 18 }],
+      data: [salesSummary],
+      nextCursor: null,
+    };
+
+    expect(adapter.unwrapApiData<typeof combined>(combined)).toBe(combined);
+    expect(
+      adapter.unwrapApiData<readonly typeof salesSummary[]>({ data: [salesSummary] }),
+    ).toEqual([salesSummary]);
   });
 });

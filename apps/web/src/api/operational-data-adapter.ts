@@ -19,6 +19,18 @@ function isRecord(value: unknown): value is UnknownRecord {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+/**
+ * Unwraps ordinary `{ data }` responses while preserving the dual products
+ * contract, whose `items` and `data` projections are both authoritative.
+ */
+export function unwrapApiData<T>(input: unknown): T {
+  if (isRecord(input) && Array.isArray(input["items"]) && "data" in input) {
+    return input as T;
+  }
+  if (isRecord(input) && "data" in input) return input["data"] as T;
+  return input as T;
+}
+
 function productItems(input: unknown): readonly unknown[] {
   if (Array.isArray(input)) return input;
   if (!isRecord(input)) throw new Error("INVALID_OPERATIONAL_DATA");

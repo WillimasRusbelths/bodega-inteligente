@@ -72,6 +72,22 @@ describe("web inventory surfaces [T066, T068]", () => {
     expect(request.mock.calls[1]?.[0]).not.toHaveProperty("body.tenantId");
   });
 
+  it("loads rich inventory resources from existing tenant-scoped routes without deriving stock", async () => {
+    const { api, request } = fakeApi();
+    request.mockResolvedValue({ items: [], nextCursor: null });
+    const resources = await api.loadOperationalResources();
+    expect(resources).toEqual({
+      products: { items: [], nextCursor: null }, lots: { items: [], nextCursor: null },
+      balances: { items: [], nextCursor: null }, movements: { items: [], nextCursor: null },
+      alerts: { items: [], nextCursor: null }, fefo: null,
+    });
+    expect(request.mock.calls.map(([call]) => call.path)).toEqual([
+      "/tenants/current/products", "/tenants/current/lots",
+      "/tenants/current/inventory/balances", "/tenants/current/inventory/movements",
+      "/tenants/current/inventory/alerts",
+    ]);
+  });
+
   it("keeps seller projections free of costs for lots and balances", () => {
     expect(operationalLot(lot, "seller")).not.toHaveProperty("unitCost");
     expect(operationalLot(lot, "inventory_manager")).toHaveProperty(

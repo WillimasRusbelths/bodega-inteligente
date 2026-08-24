@@ -119,6 +119,16 @@ export interface Page<T> {
   readonly nextCursor: string | null;
 }
 
+/** Authoritative reads needed by the operational dashboard aggregate. */
+export interface OperationalInventoryResources {
+  readonly products: Page<Product>;
+  readonly lots: Page<Lot>;
+  readonly balances: Page<InventoryBalance>;
+  readonly movements: Page<InventoryMovement>;
+  readonly alerts: Page<InventoryAlert>;
+  readonly fefo: FefoResult | null;
+}
+
 export interface ProductListQuery {
   readonly q?: string;
   readonly categoryId?: string;
@@ -526,6 +536,23 @@ export class InventoryWebApi {
         tenantScoped: true,
       })
       .then(page<InventoryAlert>);
+  }
+
+  /** Reads existing inventory resources only; it does not derive stock locally. */
+  public async loadOperationalResources(
+    fefo?: { readonly productId: string; readonly quantity: number },
+  ): Promise<OperationalInventoryResources> {
+    const [products, lots, balances, movements, alerts] = await Promise.all([
+      this.listProducts(),
+      this.listLots(),
+      this.listBalances(),
+      this.listMovements(),
+      this.listAlerts(),
+    ]);
+    return {
+      products, lots, balances, movements, alerts,
+      fefo: fefo === undefined ? null : await this.suggestFefo(fefo.productId, fefo.quantity),
+    };
   }
   public resolveAlert(
     id: string,

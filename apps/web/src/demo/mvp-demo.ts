@@ -7,10 +7,13 @@ import {
   type Lot,
   type Product,
 } from "../api/inventory-client.js";
-import {
-  createDemoInventoryData,
-  type DemoInventoryData,
-} from "./demo-data.js";
+import type {
+  AlertSummaryRow,
+  ExpirationRiskRow,
+  InventorySummary,
+  MovementSummaryRow,
+  StockByCategoryRow,
+} from "../features/bi/inventory-bi-client.js";
 
 export interface DemoTenantSession {
   readonly id: string;
@@ -85,6 +88,24 @@ export interface QuickSaleRecord {
 export interface QuickSalesDashboardData {
   readonly products: readonly QuickSaleProduct[];
   readonly sales: readonly QuickSaleRecord[];
+}
+
+/** Data received from existing tenant-scoped API reads, never from a fixture. */
+export interface OperationalDashboardData {
+  readonly role: InventoryWebRole;
+  readonly products: readonly Product[];
+  readonly lots: readonly Lot[];
+  readonly balances: readonly import("../api/inventory-client.js").InventoryBalance[];
+  readonly movements: readonly InventoryMovement[];
+  readonly alerts: readonly InventoryAlert[];
+  readonly fefo: import("../api/inventory-client.js").FefoResult;
+  readonly bi: {
+    readonly summary: InventorySummary;
+    readonly stockByCategory: readonly StockByCategoryRow[];
+    readonly expirationRisk: readonly ExpirationRiskRow[];
+    readonly movementSummary: readonly MovementSummaryRow[];
+    readonly alertsSummary: readonly AlertSummaryRow[];
+  };
 }
 
 export const demoCredentials: Record<
@@ -196,27 +217,16 @@ function defaultSession(role: InventoryWebRole): DemoWebSession {
   };
 }
 
-function defaultQuickSalesData(): QuickSalesDashboardData {
-  const data = createDemoInventoryData("owner_admin");
-  const prices = new Map<string, number>([
-    ["Leche evaporada", 5.5],
-    ["Gaseosa 1L", 6],
-    ["Arroz 5kg", 22],
-    ["Detergente 500g", 9.5],
-    ["Yogurt familiar", 8],
-    ["Aceite 1L", 12],
-  ]);
+function emptyQuickSalesData(): QuickSalesDashboardData { return { products: [], sales: [] }; }
+
+export function emptyOperationalDashboardData(role: InventoryWebRole): OperationalDashboardData {
   return {
-    products: data.products.map((product) => ({
-      id: product.id,
-      name: product.name,
-      sku: product.sku ?? null,
-      barcode: product.barcode ?? null,
-      status: product.status,
-      salePrice: prices.get(product.name) ?? 0,
-      availableStock: product.availableStock ?? 0,
-    })),
-    sales: [],
+    role, products: [], lots: [], balances: [], movements: [], alerts: [],
+    fefo: { productId: "", requestedQuantity: 0, canFulfill: false, items: [] },
+    bi: {
+      summary: { totalProducts: 0, totalStockAvailable: 0, lowStockProducts: 0, productsExpiringSoon: 0, productsExpired: 0, activeAlerts: 0 },
+      stockByCategory: [], expirationRisk: [], movementSummary: [], alertsSummary: [],
+    },
   };
 }
 
@@ -277,19 +287,16 @@ export function renderDemoLogin(
   </main>`;
 }
 
-function renderTopbar(
-  data: DemoInventoryData,
-  session: DemoWebSession,
-): string {
+function renderTopbar(role: InventoryWebRole, session: DemoWebSession): string {
   const sellerNotice =
-    data.role === "seller"
+    role === "seller"
       ? '<span class="privacy-chip">Vista operativa: costos protegidos</span>'
       : '<span class="privacy-chip">Costos visibles para rol autorizado</span>';
   return `<header class="app-topbar">
     <div>
       <span class="mode-label">Sesi&oacute;n MVP web</span>
       <h1>BodegIA MVP</h1>
-      <p>${escapeHtml(session.tenant.name)} &middot; ${roleLabels[data.role]} &middot; ${escapeHtml(session.tenant.status)}</p>
+      <p>${escapeHtml(session.tenant.name)} &middot; ${roleLabels[role]} &middot; ${escapeHtml(session.tenant.status)}</p>
     </div>
     <div class="topbar-actions">
       ${sellerNotice}
@@ -317,7 +324,7 @@ function renderSidebar(): string {
   </aside>`;
 }
 
-function renderExecutiveSummary(data: DemoInventoryData): string {
+function renderExecutiveSummary(data: OperationalDashboardData): string {
   const summary = data.bi.summary;
   const valuation = canSeeValuation(data.role)
     ? metricCard(
@@ -484,7 +491,7 @@ function alertRows(alerts: readonly InventoryAlert[]): string {
     .join("");
 }
 
-function renderOltp(data: DemoInventoryData): string {
+function renderOltp(data: OperationalDashboardData): string {
   const lots = data.lots.map((lot) => operationalLot(lot, data.role));
   const balances = data.balances.map((balance) =>
     operationalBalance(balance, data.role),
@@ -544,7 +551,7 @@ function renderWarehouse(): string {
   </section>`;
 }
 
-function renderBi(data: DemoInventoryData): string {
+function renderBi(data: OperationalDashboardData): string {
   const maxStock = Math.max(
     ...data.bi.stockByCategory.map((row) => row.stockAvailable),
     1,
@@ -636,20 +643,20 @@ function renderRoadmap(): string {
 export function renderBodegiaDashboard(
   role: InventoryWebRole = "owner_admin",
   session: DemoWebSession = defaultSession(role),
-  salesData: QuickSalesDashboardData = defaultQuickSalesData(),
+  salesData: QuickSalesDashboardData = emptyQuickSalesData(),
+  operationalData: OperationalDashboardData = emptyOperationalDashboardData(role),
 ): string {
-  const data = createDemoInventoryData(role);
   return `<div class="app-shell" data-testid="demo-dashboard" data-role="${role}" data-session="${escapeHtml(session.sessionId)}">
     ${renderSidebar()}
     <main class="dashboard-main">
-      ${renderTopbar(data, session)}
-      ${renderExecutiveSummary(data)}
+      ${renderTopbar(operationalData.role, session)}
+      ${renderExecutiveSummary(operationalData)}
       ${renderTenantSettings(session)}
       ${renderEmployees(session)}
       ${renderQuickSales(session, salesData)}
-      ${renderOltp(data)}
+      ${renderOltp(operationalData)}
       ${renderWarehouse()}
-      ${renderBi(data)}
+      ${renderBi(operationalData)}
       ${renderRoles()}
       ${renderRoadmap()}
     </main>

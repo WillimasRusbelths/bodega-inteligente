@@ -69,11 +69,12 @@ describe("BodeGIA MVP browser demo", () => {
     expect(html).toContain("Acceso reservado para due");
   });
 
-  it("shows authorized valuation to administrative roles", () => {
+  it("does not manufacture valuation for an administrative role without an API aggregate", () => {
     const html = renderBodegiaDashboard("inventory_manager");
 
     expect(html).toContain("Valorizacion");
-    expect(html).toContain("S/ 680.60");
+    expect(html).toContain("S/ 0.00");
+    expect(html).not.toContain("S/ 680.60");
     expect(html).toContain("Perdida estimada");
     expect(html).not.toContain("Guardar configuraci&oacute;n");
   });

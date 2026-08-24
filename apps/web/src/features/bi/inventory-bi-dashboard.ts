@@ -8,6 +8,19 @@ import type {
   StockByCategoryRow,
 } from "./inventory-bi-client.js";
 
+export type BiResourceState<T> =
+  | { readonly status: "IDLE" | "LOADING" }
+  | { readonly status: "READY" | "EMPTY"; readonly data: T }
+  | { readonly status: "ERROR"; readonly message: string };
+
+export interface InventoryBiResourceStates {
+  readonly summary: BiResourceState<InventorySummary>;
+  readonly stockByCategory: BiResourceState<readonly StockByCategoryRow[]>;
+  readonly expirationRisk: BiResourceState<readonly ExpirationRiskRow[]>;
+  readonly movementSummary: BiResourceState<readonly MovementSummaryRow[]>;
+  readonly alertsSummary: BiResourceState<readonly AlertSummaryRow[]>;
+}
+
 export interface InventoryBiDashboardModel {
   readonly role: InventoryWebRole;
   readonly status: "IDLE" | "LOADING" | "READY" | "EMPTY" | "ERROR";
@@ -17,6 +30,7 @@ export interface InventoryBiDashboardModel {
   readonly movementSummary: readonly MovementSummaryRow[];
   readonly alertsSummary: readonly AlertSummaryRow[];
   readonly error?: string;
+  readonly resources?: InventoryBiResourceStates;
 }
 
 function empty(role: InventoryWebRole): InventoryBiDashboardModel {
@@ -42,42 +56,36 @@ export class InventoryBiDashboardController {
     return this.#state;
   }
   public async load(): Promise<void> {
-    this.#state = { ...this.#state, status: "LOADING" };
-    try {
-      const [
-        summary,
-        stockByCategory,
-        expirationRisk,
-        movementSummary,
-        alertsSummary,
-      ] = await Promise.all([
-        this.api.inventorySummary(),
-        this.api.stockByCategory(),
-        this.api.expirationRisk(),
-        this.api.movementSummary(),
-        this.api.alertsSummary(),
-      ]);
-      const isEmpty =
-        summary.totalProducts === 0 &&
-        stockByCategory.length === 0 &&
-        expirationRisk.length === 0 &&
-        alertsSummary.length === 0;
-      this.#state = {
-        ...this.#state,
-        status: isEmpty ? "EMPTY" : "READY",
-        summary,
-        stockByCategory,
-        expirationRisk,
-        movementSummary,
-        alertsSummary,
-      };
-    } catch {
-      this.#state = {
-        ...this.#state,
-        status: "ERROR",
-        error: "No se pudo cargar el resumen BI de inventario.",
-      };
-    }
+    const loading: InventoryBiResourceStates = {
+      summary: { status: "LOADING" }, stockByCategory: { status: "LOADING" },
+      expirationRisk: { status: "LOADING" }, movementSummary: { status: "LOADING" },
+      alertsSummary: { status: "LOADING" },
+    };
+    this.#state = { ...this.#state, status: "LOADING", resources: loading };
+    const results = await Promise.allSettled([
+      this.api.inventorySummary(), this.api.stockByCategory(), this.api.expirationRisk(),
+      this.api.movementSummary(), this.api.alertsSummary(),
+    ]);
+    const safeError = "No se pudo cargar el resumen BI de inventario.";
+    const asResource = <T>(result: PromiseSettledResult<T>): BiResourceState<T> =>
+      result.status === "fulfilled"
+        ? { status: Array.isArray(result.value) && result.value.length === 0 ? "EMPTY" : "READY", data: result.value }
+        : { status: "ERROR", message: safeError };
+    const resources: InventoryBiResourceStates = {
+      summary: asResource(results[0]), stockByCategory: asResource(results[1]),
+      expirationRisk: asResource(results[2]), movementSummary: asResource(results[3]),
+      alertsSummary: asResource(results[4]),
+    };
+    const value = <T>(resource: BiResourceState<T>, fallback: T): T =>
+      "data" in resource ? resource.data : fallback;
+    const summary = value(resources.summary, undefined as never);
+    const stockByCategory = value(resources.stockByCategory, []);
+    const expirationRisk = value(resources.expirationRisk, []);
+    const movementSummary = value(resources.movementSummary, []);
+    const alertsSummary = value(resources.alertsSummary, []);
+    const allFailed = Object.values(resources).every((resource) => resource.status === "ERROR");
+    const isEmpty = summary !== undefined && summary.totalProducts === 0 && stockByCategory.length === 0 && expirationRisk.length === 0 && alertsSummary.length === 0;
+    this.#state = { ...this.#state, status: allFailed ? "ERROR" : isEmpty ? "EMPTY" : "READY", summary, stockByCategory, expirationRisk, movementSummary, alertsSummary, resources, ...(allFailed ? { error: safeError } : {}) };
   }
 }
 
