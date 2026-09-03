@@ -21,6 +21,7 @@ import type {
   ResourceState,
   WebSessionContext,
 } from "../features/dashboard/operational-dashboard-state.js";
+import { resolveCapabilityContext } from "../features/navigation/capability-context.js";
 import {
   renderBodegiaDashboard,
   renderDemoLogin,
@@ -159,6 +160,12 @@ type BrowserDashboardState =
   OperationalDashboardState<BrowserDashboardResources>;
 type BrowserDashboardController =
   OperationalDashboardController<BrowserDashboardResources>;
+interface CapabilityAwareDemoWebSession extends DemoWebSession {
+  readonly activeTenant?: {
+    readonly capabilities: readonly string[];
+  } | null;
+  readonly effectivePermissions?: readonly string[];
+}
 interface LoadedDashboard {
   readonly controller: BrowserDashboardController;
   readonly state: BrowserDashboardState;
@@ -181,12 +188,23 @@ const emptyIndicators: OperationalIndicators = {
   alertsSummary: [],
 };
 
-function sessionContext(session: DemoWebSession): WebSessionContext {
+function sessionContext(
+  session: CapabilityAwareDemoWebSession,
+): WebSessionContext {
+  const capabilities = resolveCapabilityContext({
+    ...(session.activeTenant === undefined
+      ? {}
+      : { activeTenant: session.activeTenant }),
+    ...(session.effectivePermissions === undefined
+      ? {}
+      : { effectivePermissions: session.effectivePermissions }),
+    demoRole: session.membership.role,
+  }).capabilities;
   return {
     sessionId: session.sessionId,
     tenantId: session.tenant.id,
     membershipId: session.membership.id,
-    capabilities: [],
+    capabilities,
   };
 }
 

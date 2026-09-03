@@ -1,4 +1,10 @@
 import { describe, expect, it } from "vitest";
+import {
+  operationalBalance,
+  operationalLot,
+  type InventoryBalance,
+  type Lot,
+} from "../src/api/inventory-client.js";
 import { renderBodegiaDashboard } from "../src/demo/mvp-demo.js";
 import { renderInventoryBiDashboard } from "../src/features/bi/inventory-bi-dashboard.js";
 
@@ -19,10 +25,35 @@ function section(html: string, id: string): string | null {
 }
 
 function visibleText(html: string): string {
-  return html.replace(/<[^>]*>/gu, " ").replace(/\s+/gu, " ").trim();
+  return html
+    .replace(/<[^>]*>/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
 }
 
 const financialValues = ["680.6", "104.4", "46.8"] as const;
+
+function sellerInventoryProjections(): readonly unknown[] {
+  const lot: Lot = {
+    id: "lot-malformed-cost",
+    tenantId: "tenant-a",
+    productId: "product-a",
+    expiresAt: "2027-01-01",
+    initialQuantity: 10,
+    availableQuantity: 4,
+    unitCost: 91.25,
+    status: "AVAILABLE",
+    version: 1,
+  };
+  const balance: InventoryBalance = {
+    tenantId: "tenant-a",
+    productId: "product-a",
+    lotId: lot.id,
+    availableQuantity: 4,
+    unitCost: 91.25,
+  };
+  return [operationalLot(lot, "seller"), operationalBalance(balance, "seller")];
+}
 
 function sellerBiStates(): readonly string[] {
   return [
@@ -90,7 +121,7 @@ function sellerBiStates(): readonly string[] {
   ];
 }
 
-describe("web stabilization seller privacy [T012]", () => {
+describe("web stabilization seller privacy [T012, T040]", () => {
   it("does not mount restricted surfaces or expose cost, valuation, loss or purchase content to seller", () => {
     const sellerHtml = renderBodegiaDashboard("seller");
     const renderedRestrictedSections = sellerRestrictedSections.filter(
@@ -111,17 +142,29 @@ describe("web stabilization seller privacy [T012]", () => {
     const stateFinancialExposure = financialValues.filter((value) =>
       sellerBiStates().some((html) => html.includes(value)),
     );
+    const stateRestrictedFields = [
+      "unitCost",
+      "inventoryValuation",
+      "estimatedLoss",
+    ].filter((field) => sellerBiStates().some((html) => html.includes(field)));
+    const inventoryProjection = JSON.stringify(sellerInventoryProjections());
 
     expect({
       renderedRestrictedSections,
       sensitiveContentSections,
       renderedFinancialValues,
       stateFinancialExposure,
+      stateRestrictedFields,
+      inventoryProjectionExposesCost: /unitCost|91\.25/iu.test(
+        inventoryProjection,
+      ),
     }).toEqual({
       renderedRestrictedSections: [],
       sensitiveContentSections: [],
       renderedFinancialValues: [],
       stateFinancialExposure: [],
+      stateRestrictedFields: [],
+      inventoryProjectionExposesCost: false,
     });
   });
 });
