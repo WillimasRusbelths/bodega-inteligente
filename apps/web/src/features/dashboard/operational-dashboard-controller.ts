@@ -53,21 +53,36 @@ function failedRefreshResource<T>(
 ): ResourceState<T> {
   const correlationId =
     reason instanceof SafeWebApiError ? reason.correlationId : null;
-  if (previous.status === "ready" || previous.status === "stale") {
-    return resourceState.stale(
-      previous.data,
-      "POST_SALE_REFRESH_FAILED",
+  if (reason instanceof SafeWebApiError && [403, 404].includes(reason.status)) {
+    return resourceState.error(
+      "No se pudo consultar el recurso.",
       correlationId,
       cycle,
     );
   }
+  if (previous.status === "ready" || previous.status === "stale") {
+    return {
+      ...resourceState.stale(
+        previous.data,
+        "POST_SALE_REFRESH_FAILED",
+        correlationId,
+        cycle,
+      ),
+      ...(previous.receivedAt === undefined
+        ? {}
+        : { receivedAt: previous.receivedAt }),
+    };
+  }
   if (previous.status === "empty") {
-    return resourceState.stale(
-      [] as unknown as T,
-      "POST_SALE_REFRESH_FAILED",
-      correlationId,
-      cycle,
-    );
+    return {
+      ...resourceState.stale(
+        [] as unknown as T,
+        "POST_SALE_REFRESH_FAILED",
+        correlationId,
+        cycle,
+      ),
+      receivedAt: previous.receivedAt,
+    };
   }
   return resourceState.error(
     "No se pudieron actualizar los datos operativos.",
@@ -81,20 +96,28 @@ function refreshingResource<T>(
   cycle: number,
 ): ResourceState<T> {
   if (previous.status === "ready" || previous.status === "stale") {
-    return resourceState.stale(
-      previous.data,
-      "POST_SALE_REFRESH_PENDING",
-      null,
-      cycle,
-    );
+    return {
+      ...resourceState.stale(
+        previous.data,
+        "POST_SALE_REFRESH_PENDING",
+        null,
+        cycle,
+      ),
+      ...(previous.receivedAt === undefined
+        ? {}
+        : { receivedAt: previous.receivedAt }),
+    };
   }
   if (previous.status === "empty") {
-    return resourceState.stale(
-      [] as unknown as T,
-      "POST_SALE_REFRESH_PENDING",
-      null,
-      cycle,
-    );
+    return {
+      ...resourceState.stale(
+        [] as unknown as T,
+        "POST_SALE_REFRESH_PENDING",
+        null,
+        cycle,
+      ),
+      receivedAt: previous.receivedAt,
+    };
   }
   return resourceState.loading(cycle) as ResourceState<T>;
 }
@@ -123,6 +146,40 @@ export class OperationalDashboardController<
   #abortController: AbortController | null = null;
   #state: OperationalDashboardState<TResources> | null = null;
   #cycle = 0;
+  readonly #listeners = new Set<
+    (state: OperationalDashboardState<TResources> | null) => void
+  >();
+
+  public subscribe(
+    listener: (state: OperationalDashboardState<TResources> | null) => void,
+  ): () => void {
+    this.#listeners.add(listener);
+    return () => {
+      this.#listeners.delete(listener);
+    };
+  }
+
+  #publish(): void {
+    for (const listener of this.#listeners) listener(this.#state);
+  }
+
+  async #read(
+    key: keyof TResources,
+    context: WebSessionContext,
+    signal: AbortSignal,
+  ): Promise<TResources[keyof TResources]> {
+    try {
+      return await this.#loaders[key]({ context, signal });
+    } catch (error) {
+      if (
+        !signal.aborted &&
+        error instanceof SafeWebApiError &&
+        error.status === 401
+      )
+        this.clear();
+      throw error;
+    }
+  }
   #saleSubmission: Promise<OperationalDashboardState<TResources> | null> | null =
     null;
 
@@ -139,6 +196,7 @@ export class OperationalDashboardController<
     this.#abortController = null;
     this.#contexts.clear();
     this.#state = null;
+    this.#publish();
   }
 
   #nextCycle(): number {
@@ -167,11 +225,10 @@ export class OperationalDashboardController<
       resources: loading,
       sale: { status: "idle" },
     };
+    this.#publish();
 
     const settled = await Promise.allSettled(
-      keys.map((key) =>
-        this.#loaders[key]({ context, signal: abortController.signal }),
-      ),
+      keys.map((key) => this.#read(key, context, abortController.signal)),
     );
     if (
       abortController.signal.aborted ||
@@ -208,6 +265,7 @@ export class OperationalDashboardController<
       sale: { status: "idle" },
     };
     this.#state = state;
+    this.#publish();
     return state;
   }
 
@@ -244,11 +302,18 @@ export class OperationalDashboardController<
         idempotencyKey: input.idempotencyKey,
       },
     };
+    this.#publish();
 
     let sale: TSale;
     try {
       sale = await input.create();
     } catch (reason) {
+      if (
+        this.#contexts.accepts(contextKey) &&
+        reason instanceof SafeWebApiError &&
+        reason.status === 401
+      )
+        this.clear();
       if (!this.#contexts.accepts(contextKey) || this.#state === null)
         return null;
       const correlationId =
@@ -262,6 +327,7 @@ export class OperationalDashboardController<
           idempotencyKey: input.idempotencyKey,
         },
       };
+      this.#publish();
       return this.#state;
     }
 
@@ -273,22 +339,65 @@ export class OperationalDashboardController<
       confirmedAt: new Date().toISOString(),
     };
     this.#state = { ...this.#state, sale: confirmedSale };
+    this.#publish();
     return this.#refresh(postSaleResourceKeys(this.#loaders));
   }
 
   public retryStale(): Promise<OperationalDashboardState<TResources> | null> {
     const current = this.#state;
-    if (current === null || current.sale.status !== "succeeded") {
+    if (
+      current === null ||
+      current.sale.status === "submitting" ||
+      this.#readsPending()
+    ) {
       return Promise.resolve(current);
     }
     const keys = (
       Object.keys(current.resources) as (keyof TResources)[]
     ).filter((key) => {
-      const status = current.resources[key].status;
-      return status === "stale" || status === "error";
+      const resource = current.resources[key];
+      return (
+        resource.status === "error" ||
+        (resource.status === "stale" &&
+          resource.reason !== "POST_SALE_REFRESH_PENDING")
+      );
     });
     if (keys.length === 0) return Promise.resolve(current);
     return this.#refresh(keys);
+  }
+
+  public retryResources(
+    requested: readonly (keyof TResources)[],
+  ): Promise<OperationalDashboardState<TResources> | null> {
+    const current = this.#state;
+    if (
+      current === null ||
+      current.sale.status === "submitting" ||
+      this.#readsPending()
+    )
+      return Promise.resolve(current);
+    const keys = [...new Set(requested)].filter((key) => {
+      const resource = current.resources[key];
+      return (
+        resource !== undefined &&
+        (resource.status === "error" ||
+          (resource.status === "stale" &&
+            resource.reason !== "POST_SALE_REFRESH_PENDING"))
+      );
+    });
+    return keys.length === 0 ? Promise.resolve(current) : this.#refresh(keys);
+  }
+
+  #readsPending(): boolean {
+    return (
+      this.#state !== null &&
+      Object.values(this.#state.resources).some(
+        (resource: ResourceState<unknown>) =>
+          resource.status === "loading" ||
+          (resource.status === "stale" &&
+            resource.reason === "POST_SALE_REFRESH_PENDING"),
+      )
+    );
   }
 
   async #refresh(
@@ -320,11 +429,10 @@ export class OperationalDashboardController<
       generation: cycle,
       resources: refreshing,
     };
+    this.#publish();
 
     const settled = await Promise.allSettled(
-      keys.map((key) =>
-        this.#loaders[key]({ context, signal: abortController.signal }),
-      ),
+      keys.map((key) => this.#read(key, context, abortController.signal)),
     );
     if (
       abortController.signal.aborted ||
@@ -360,6 +468,7 @@ export class OperationalDashboardController<
       generation: cycle,
       resources,
     };
+    this.#publish();
     return this.#state;
   }
 }

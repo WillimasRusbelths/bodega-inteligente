@@ -17,9 +17,10 @@ import type {
   MovementSummaryRow,
   StockByCategoryRow,
 } from "../features/bi/inventory-bi-client.js";
-import type {
-  ResourceState,
-  SaleMutationState,
+import {
+  resourceState,
+  type ResourceState,
+  type SaleMutationState,
 } from "../features/dashboard/operational-dashboard-state.js";
 import { resolveCapabilityContext } from "../features/navigation/capability-context.js";
 import {
@@ -28,6 +29,7 @@ import {
 } from "../features/navigation/capability-navigation.js";
 import { renderMembershipRoleManagement } from "../features/memberships/RoleEditor.js";
 import { projectOperationalDataForContext } from "../api/operational-data-adapter.js";
+import { renderSurfaceState as renderResourceSurface } from "../features/dashboard/surface-state-view.js";
 
 export interface DemoTenantSession {
   readonly id: string;
@@ -187,6 +189,17 @@ const resourceLabels: Readonly<Record<DashboardResourceName, string>> = {
   indicators: "indicadores",
 };
 
+export const readCapabilities: Readonly<Record<DashboardResourceName, string>> =
+  {
+    products: "inventory.products.read",
+    lots: "inventory.lots.read",
+    balances: "inventory.stock.read",
+    movements: "inventory.movements.read",
+    alerts: "inventory.alerts.read",
+    sales: "sales.read",
+    indicators: "inventory.stock.read",
+  };
+
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return value !== null && typeof value === "object";
 }
@@ -230,6 +243,7 @@ function renderSurfaceState(
 
 function renderPostSaleSynchronization(
   synchronization: DashboardSynchronizationView | undefined,
+  capabilities: readonly string[],
 ): string {
   if (synchronization === undefined || synchronization.sale.status === "idle") {
     return "";
@@ -239,12 +253,20 @@ function renderPostSaleSynchronization(
   }
   if (synchronization.sale.status === "error") {
     const correlation = synchronization.sale.correlationId;
-    return `<aside class="sale-synchronization form-error" role="alert">${escapeHtml(synchronization.sale.message)}${correlation === null ? "" : ` Correlaci&oacute;n: ${escapeHtml(correlation)}.`}</aside>`;
+    return `<aside class="sale-synchronization form-error" role="alert">No se pudo registrar la venta. Conservamos las entradas para reintentar.${correlation === null ? "" : ` correlationId: ${escapeHtml(correlation)}.`}</aside>`;
   }
 
   const saleNumber = confirmedSaleNumber(synchronization.sale.sale);
   const stale = unsynchronizedResources(synchronization);
   const confirmation = `Venta${saleNumber === null ? "" : ` ${escapeHtml(saleNumber)}`} confirmada.`;
+  const pending = Object.values(synchronization.resources).some(
+    (state) =>
+      state.status === "loading" ||
+      (state.status === "stale" &&
+        state.reason === "POST_SALE_REFRESH_PENDING"),
+  );
+  if (pending)
+    return `<aside class="sale-synchronization is-stale" role="status">${confirmation} Actualizando lecturas; los datos anteriores pueden estar desactualizados.</aside>`;
   if (stale.length === 0) {
     return `<aside class="sale-synchronization" role="status">${confirmation} Datos operativos actualizados.</aside>`;
   }
@@ -257,7 +279,7 @@ function renderPostSaleSynchronization(
   return `<aside class="sale-synchronization is-stale" role="status">
     <p>${confirmation} Algunos datos no pudieron sincronizarse.</p>
     <ul aria-label="Recursos no sincronizados">${items}</ul>
-    <button id="retry-post-sale-refresh" class="secondary-action" type="button">Reintentar actualizaci&oacute;n</button>
+    ${stale.some((key) => capabilities.includes(readCapabilities[key])) ? '<button id="retry-post-sale-refresh" class="secondary-action" type="button">Reintentar actualizaci&oacute;n</button>' : ""}
   </aside>`;
 }
 
@@ -445,6 +467,19 @@ function renderExecutiveSummary(
   capabilities: readonly string[],
   synchronization?: DashboardSynchronizationView,
 ): string {
+  const state = synchronization?.resources.indicators;
+  if (state !== undefined) {
+    const region = renderResourceSurface({
+      resource: "indicators",
+      label: "Indicadores",
+      state,
+      canRetry: capabilities.includes(readCapabilities.indicators),
+      renderContent: () => renderExecutiveSummary(data, capabilities),
+    });
+    return state.status === "ready" || state.status === "stale"
+      ? region
+      : `<section id="inicio" class="panel"><h2>Resumen ejecutivo</h2>${region}</section>`;
+  }
   const summary = data.bi.summary;
   const valuation = canViewCosts(data.role, capabilities)
     ? metricCard(
@@ -542,31 +577,60 @@ function quickSaleHistoryRows(sales: readonly QuickSaleRecord[]): string {
 
 function renderQuickSales(
   salesData: QuickSalesDashboardData,
+  capabilities: readonly string[],
   synchronization?: DashboardSynchronizationView,
 ): string {
+  const region = (
+    key: "products" | "sales",
+    label: string,
+    content: string,
+  ): string => {
+    const source = synchronization?.resources[key];
+    const state =
+      source?.status === "ready" && salesData[key].length === 0
+        ? resourceState.empty(source.receivedAt, source.cycle)
+        : source;
+    return state === undefined
+      ? content
+      : renderResourceSurface({
+          resource: key,
+          label,
+          state,
+          canRetry: capabilities.includes(readCapabilities[key]),
+          renderContent: () => content,
+        });
+  };
   const firstProduct = salesData.products[0];
+  const unavailable =
+    synchronization !== undefined &&
+    (synchronization.sale.status === "submitting" ||
+      synchronization.resources.products.status !== "ready");
   return `<section id="ventas" class="panel" aria-labelledby="ventas-title">
-    <div class="section-heading"><span class="eyebrow">Ventas</span><h2 id="ventas-title">Ventas r&aacute;pidas</h2><p>Flujo MVP: seleccionar producto, cantidad, precio, descontar stock por FEFO y guardar historial.</p></div>
+    <div class="section-heading"><span class="eyebrow">Ventas</span><h2 id="ventas-title">Ventas r&aacute;pidas</h2><p>Selecciona producto, cantidad y precio. El servidor confirma la venta y actualiza el stock por FEFO.</p></div>
     ${renderSurfaceState(synchronization, ["products", "sales"], "Ventas r&aacute;pidas")}
     <div class="content-grid two-columns">
       <article class="card">
         <h3>Registrar venta</h3>
-        <form id="quick-sale-form" class="settings-form">
+        ${region(
+          "products",
+          "Productos",
+          `<form id="quick-sale-form" class="settings-form">
           <label>Producto<select name="productId" id="quick-sale-product">${quickSaleProductOptions(salesData.products)}</select></label>
-          <label>Stock disponible<input id="quick-sale-stock" value="${firstProduct?.availableStock ?? 0}" readonly /></label>
+          <label>Stock de producto<input id="quick-sale-stock" value="${firstProduct?.availableStock ?? 0}" readonly /></label>
           <label>Cantidad<input name="quantity" id="quick-sale-quantity" type="number" min="1" step="1" value="1" /></label>
           <label>Precio de venta<input name="unitPrice" id="quick-sale-price" type="number" min="0" step="0.01" value="${firstProduct?.salePrice ?? 0}" /></label>
           <label>Total<input id="quick-sale-total" value="${money(firstProduct?.salePrice ?? 0)}" readonly /></label>
-          <button class="primary-action" type="submit">Registrar venta</button>
+          <button class="primary-action" type="submit"${unavailable ? " disabled" : ""}>Registrar venta</button>
           <p id="quick-sale-result" class="form-status" role="status"></p>
-        </form>
+        </form>`,
+        )}
       </article>
       <article class="card">
         <h3>Historial de ventas</h3>
-        <div class="table-wrap"><table><thead><tr><th>Venta</th><th>Producto</th><th>Cantidad</th><th>Total</th><th>Estado</th></tr></thead><tbody>${quickSaleHistoryRows(salesData.sales)}</tbody></table></div>
+        ${region("sales", "Ventas", `<div class="table-wrap"><table><thead><tr><th>Venta</th><th>Producto</th><th>Cantidad</th><th>Total</th><th>Estado</th></tr></thead><tbody>${quickSaleHistoryRows(salesData.sales)}</tbody></table></div>`)}
       </article>
     </div>
-    ${renderPostSaleSynchronization(synchronization)}
+    ${renderPostSaleSynchronization(synchronization, capabilities)}
   </section>`;
 }
 
@@ -617,6 +681,31 @@ function renderOltp(
   capabilities: readonly string[],
   synchronization?: DashboardSynchronizationView,
 ): string {
+  if (synchronization !== undefined) {
+    const table = (
+      key: DashboardResourceName,
+      label: string,
+      headers: string,
+      rows: () => string,
+    ): string => {
+      const source = synchronization.resources[key];
+      const state =
+        key === "products" &&
+        source.status === "ready" &&
+        data.products.length === 0
+          ? resourceState.empty(source.receivedAt, source.cycle)
+          : source;
+      return `<article class="card"><h3>${label}</h3>${renderResourceSurface({ resource: key, label, state, canRetry: capabilities.includes(readCapabilities[key]), renderContent: () => `<div class="table-wrap"><table><thead><tr>${headers}</tr></thead><tbody>${rows()}</tbody></table></div>` })}</article>`;
+    };
+    return `<section id="oltp" class="panel"><h2>Operacion diaria de inventario</h2><div class="content-grid two-columns">
+      ${table("products", "Productos", "<th>Producto</th><th>Categoria</th><th>Stock de producto</th><th>Estado</th>", () => productRows(data.products))}
+      ${table("lots", "Lotes", `<th>Lote</th><th>Vence</th><th>Stock por lote</th><th>Estado</th>${canViewCosts(data.role, capabilities) ? "<th>Costo unitario</th>" : ""}`, () => lotRows(data.lots, data.role, capabilities))}
+      ${table("balances", "Balances", "<th>Lote</th><th>Stock por lote</th>", () => data.balances.map((balance) => `<tr><td>${escapeHtml(balance.lotId)}</td><td>${balance.availableQuantity}</td></tr>`).join(""))}
+      ${table("movements", "Movimientos", "<th>Tipo</th><th>Cantidad</th><th>Delta</th><th>Motivo</th>", () => movementRows(data.movements))}
+      ${table("alerts", "Alertas", "<th>Tipo</th><th>Estado</th><th>Valor</th><th>Umbral</th>", () => alertRows(data.alerts))}
+      <article class="card"><h3>Sugerencia FEFO</h3><p>Selecciona un producto para consultar el lote que vence primero.</p></article>
+    </div></section>`;
+  }
   const lots = data.lots.map((lot) =>
     operationalLot(lot, data.role, capabilities),
   );
@@ -627,7 +716,7 @@ function renderOltp(
     data.products.map((product) => product.category?.name ?? "Sin categoria"),
   );
   const costHeader = canViewCosts(data.role, capabilities)
-    ? "<th>Costo</th>"
+    ? "<th>Costo unitario</th>"
     : "";
   return `<section id="oltp" class="panel" aria-labelledby="oltp-title">
     <div class="section-heading"><span class="eyebrow">Operacion OLTP</span><h2 id="oltp-title">Operacion diaria de inventario</h2><p>OLTP registra las operaciones diarias de la bodega.</p></div>
@@ -641,8 +730,8 @@ function renderOltp(
       <span>FEFO activo</span>
     </div>
     <div class="content-grid two-columns">
-      <article class="card"><h3>Productos</h3><div class="table-wrap"><table><thead><tr><th>Producto</th><th>Categoria</th><th>Stock</th><th>Estado</th></tr></thead><tbody>${productRows(data.products)}</tbody></table></div></article>
-      <article class="card"><h3>Lotes y vencimientos</h3><div class="table-wrap"><table><thead><tr><th>Lote</th><th>Vence</th><th>Stock</th><th>Estado</th>${costHeader}</tr></thead><tbody>${lotRows(data.lots, data.role, capabilities)}</tbody></table></div></article>
+      <article class="card"><h3>Productos</h3><div class="table-wrap"><table><thead><tr><th>Producto</th><th>Categoria</th><th>Stock de producto</th><th>Estado</th></tr></thead><tbody>${productRows(data.products)}</tbody></table></div></article>
+      <article class="card"><h3>Lotes y vencimientos</h3><div class="table-wrap"><table><thead><tr><th>Lote</th><th>Vence</th><th>Stock por lote</th><th>Estado</th>${costHeader}</tr></thead><tbody>${lotRows(data.lots, data.role, capabilities)}</tbody></table></div></article>
       <article class="card"><h3>Movimientos / Kardex</h3><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Cantidad</th><th>Delta</th><th>Motivo</th></tr></thead><tbody>${movementRows(data.movements)}</tbody></table></div></article>
       <article class="card"><h3>Alertas y FEFO</h3><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Estado</th><th>Valor</th><th>Umbral</th></tr></thead><tbody>${alertRows(data.alerts)}</tbody></table></div><div class="fefo-box"><span>Sugerencia FEFO</span><strong>${data.fefo.items[0]?.suggestedQuantity ?? 0} unidades</strong><small>Lote ${escapeHtml(data.fefo.items[0]?.lotId.slice(-6) ?? "N/D")} vence ${escapeHtml(data.fefo.items[0]?.expiresAt ?? "N/D")}</small></div></article>
     </div>
@@ -686,6 +775,19 @@ function renderBi(
   capabilities: readonly string[],
   synchronization?: DashboardSynchronizationView,
 ): string {
+  const state = synchronization?.resources.indicators;
+  if (state !== undefined) {
+    const region = renderResourceSurface({
+      resource: "indicators",
+      label: "Indicadores",
+      state,
+      canRetry: capabilities.includes(readCapabilities.indicators),
+      renderContent: () => renderBi(data, capabilities),
+    });
+    return state.status === "ready" || state.status === "stale"
+      ? region
+      : `<section id="bi" class="panel"><h2>BI/OLAP</h2>${region}</section>`;
+  }
   const maxStock = Math.max(
     ...data.bi.stockByCategory.map((row) => row.stockAvailable),
     1,
@@ -696,7 +798,7 @@ function renderBi(
   );
   const valuation = canViewCosts(data.role, capabilities)
     ? metricCard(
-        "Valorizacion BI",
+        "Valorizacion",
         money(data.bi.summary.inventoryValuation ?? 0),
         "money",
       )
@@ -725,7 +827,7 @@ function renderBi(
     <div class="content-grid two-columns">
       <article class="card"><h3>Stock por categoria</h3>${data.bi.stockByCategory.map((row) => progressBar(row.categoryName, row.stockAvailable, maxStock)).join("")}</article>
       <article class="card"><h3>Movimientos por tipo</h3>${data.bi.movementSummary.map((row) => progressBar(row.type, row.quantity, maxMovement)).join("")}</article>
-      <article class="card"><h3>Riesgo de vencimiento</h3><div class="table-wrap"><table><thead><tr><th>Producto</th><th>Vence</th><th>Stock</th><th>Estado</th>${lossHeader}</tr></thead><tbody>${riskRows}</tbody></table></div></article>
+      <article class="card"><h3>Riesgo de vencimiento</h3><div class="table-wrap"><table><thead><tr><th>Producto</th><th>Vence</th><th>Stock por lote</th><th>Estado</th>${lossHeader}</tr></thead><tbody>${riskRows}</tbody></table></div></article>
       <article class="card"><h3>Alertas por tipo y estado</h3>${data.bi.alertsSummary.map((row) => `<div class="alert-summary"><span>${badge(row.type)} ${badge(row.status)}</span><strong>${row.alertCount}</strong></div>`).join("")}</article>
     </div>
   </section>`;
@@ -766,7 +868,7 @@ export function renderBodegiaDashboard(
       ${authorized("#inicio", () => renderExecutiveSummary(data, capabilities, synchronization))}
       ${authorized("#configuracion", () => renderTenantSettings(session))}
       ${authorized("#empleados", () => renderEmployees(session, capabilities))}
-      ${authorized("#ventas", () => renderQuickSales(salesData, synchronization))}
+      ${authorized("#ventas", () => renderQuickSales(salesData, capabilities, synchronization))}
       ${authorized("#oltp", () => renderOltp(data, capabilities, synchronization))}
       ${authorized("#warehouse", renderWarehouse)}
       ${authorized("#bi", () => renderBi(data, capabilities, synchronization))}

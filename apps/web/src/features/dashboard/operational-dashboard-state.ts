@@ -34,6 +34,7 @@ export type ResourceState<T> =
       readonly status: "stale";
       readonly data: T;
       readonly reason: string;
+      readonly receivedAt?: string;
       readonly correlationId: string | null;
       readonly cycle: number;
     };
@@ -53,7 +54,9 @@ export type SaleMutationState<TSale = unknown> =
       readonly idempotencyKey: string;
     };
 
-export interface OperationalDashboardState<TResources = Record<string, unknown>> {
+export interface OperationalDashboardState<
+  TResources = Record<string, unknown>,
+> {
   readonly context: WebSessionContext | null;
   readonly contextKey: string | null;
   readonly generation: number;
@@ -65,7 +68,10 @@ export interface OperationalDashboardState<TResources = Record<string, unknown>>
 
 export const resourceState = {
   idle: (): ResourceState<never> => ({ status: "idle" }),
-  loading: (cycle: number): ResourceState<never> => ({ status: "loading", cycle }),
+  loading: (cycle: number): ResourceState<never> => ({
+    status: "loading",
+    cycle,
+  }),
   ready: <T>(data: T, receivedAt: string, cycle: number): ResourceState<T> => ({
     status: "ready",
     data,
@@ -81,13 +87,18 @@ export const resourceState = {
     message: string,
     correlationId: string | null,
     cycle: number,
-  ): ResourceState<never> => ({ status: "error", message, correlationId, cycle }),
+  ): ResourceState<never> => ({
+    status: "error",
+    message,
+    correlationId,
+    cycle,
+  }),
   stale: <T>(
     data: T,
     reason: string,
     correlationId: string | null,
     cycle: number,
-  ): ResourceState<T> => ({
+  ): Extract<ResourceState<T>, { readonly status: "stale" }> => ({
     status: "stale",
     data,
     reason,
@@ -116,7 +127,10 @@ export class DashboardContextGeneration {
   } {
     this.#generation += 1;
     this.#currentContextKey = createContextKey(context);
-    return { contextKey: this.#currentContextKey, generation: this.#generation };
+    return {
+      contextKey: this.#currentContextKey,
+      generation: this.#generation,
+    };
   }
 
   public accepts(contextKey: string): boolean {

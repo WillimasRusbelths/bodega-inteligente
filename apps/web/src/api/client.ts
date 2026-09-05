@@ -46,7 +46,7 @@ function normalizedBaseUrl(value: string): string {
   return url.toString().replace(/\/$/u, "");
 }
 
-function errorMetadata(value: unknown): {
+export function errorMetadata(value: unknown): {
   readonly code: string;
   readonly correlationId: string | null;
 } {
@@ -54,6 +54,9 @@ function errorMetadata(value: unknown): {
     return { code: "REQUEST_FAILED", correlationId: null };
   }
   const body = value as Record<string, unknown>;
+  if (body["error"] !== null && typeof body["error"] === "object") {
+    return errorMetadata(body["error"]);
+  }
   return {
     code: typeof body["code"] === "string" ? body["code"] : "REQUEST_FAILED",
     correlationId:
@@ -80,6 +83,7 @@ export class WebApiClient {
   public async request<TResponse, TBody = unknown>(
     request: WebRequest<TBody>,
   ): Promise<TResponse> {
+    request.signal?.throwIfAborted();
     if (request.tenantScoped === true && this.#activeTenantId() === null) {
       throw new SafeWebApiError({
         status: 403,
@@ -118,7 +122,9 @@ export class WebApiClient {
           : { body: JSON.stringify(request.body) }),
       });
       const responseBody: unknown =
-        response.status === 204 ? undefined : await response.json();
+        response.status === 204
+          ? undefined
+          : await response.json().catch(() => undefined);
       if (!response.ok) {
         const metadata = errorMetadata(responseBody);
         throw new SafeWebApiError({
@@ -129,6 +135,15 @@ export class WebApiClient {
         });
       }
       return responseBody as TResponse;
+    } catch (error) {
+      if (error instanceof SafeWebApiError) throw error;
+      if (request.signal?.aborted === true)
+        throw new DOMException("Solicitud cancelada.", "AbortError");
+      throw new SafeWebApiError({
+        status: 0,
+        code: controller.signal.aborted ? "REQUEST_TIMEOUT" : "NETWORK_ERROR",
+        correlationId: null,
+      });
     } finally {
       clearTimeout(timeout);
       request.signal?.removeEventListener("abort", abort);

@@ -13,7 +13,7 @@ import type {
   MovementSummaryRow,
   StockByCategoryRow,
 } from "../features/bi/inventory-bi-client.js";
-import { SafeWebApiError } from "../api/client.js";
+import { SafeWebApiError, errorMetadata } from "../api/client.js";
 import {
   projectOperationalDataForContext,
   unwrapApiData,
@@ -29,6 +29,7 @@ import { resolveCapabilityNavigation } from "../features/navigation/capability-n
 import {
   renderBodegiaDashboard,
   renderDemoLogin,
+  readCapabilities,
   type DemoEmployee,
   type DemoTenantSession,
   type DemoWebSession,
@@ -49,14 +50,6 @@ declare global {
     readonly __BODEGIA_API_BASE_URL?: string;
   }
 }
-
-type ApiError = {
-  readonly error: {
-    readonly code: string;
-    readonly message: string;
-    readonly correlationId: string;
-  };
-};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
@@ -111,17 +104,23 @@ async function readApi<T>(
       ...init?.headers,
     },
   });
-  const payload = (await response.json()) as unknown;
-  const error =
-    isRecord(payload) && "error" in payload
-      ? (payload as ApiError).error
-      : undefined;
-  if (!response.ok || error !== undefined) {
+  const payload: unknown = await response.json().catch(() => undefined);
+  if (!response.ok || (isRecord(payload) && "error" in payload)) {
+    const error = errorMetadata(payload);
+    if (
+      response.status === 401 &&
+      sessionId !== undefined &&
+      globalThis.sessionStorage.getItem("BODEGIA_DEMO_SESSION") === sessionId &&
+      !init?.signal?.aborted
+    ) {
+      globalThis.sessionStorage.removeItem("BODEGIA_DEMO_SESSION");
+      mountLogin(selectedRole());
+    }
     throw new SafeWebApiError({
       status: response.status,
-      code: error?.code ?? "REQUEST_FAILED",
+      code: error.code,
       correlationId:
-        error?.correlationId ?? response.headers.get("x-correlation-id"),
+        error.correlationId ?? response.headers.get("x-correlation-id"),
     });
   }
   return unwrapApiData<T>(payload);
@@ -200,6 +199,53 @@ const emptyIndicators: OperationalIndicators = {
 };
 
 let mountedController: BrowserDashboardController | null = null;
+let draftContext: string | null = null;
+let safeDrafts: Record<string, string> = {};
+let lastSaleStatus: BrowserDashboardState["sale"]["status"] = "idle";
+let settingsPending: string | null = null;
+let confirmedSettings: {
+  readonly sessionId: string;
+  readonly tenant: DemoTenantSession;
+} | null = null;
+
+const draftFields = {
+  "quick-sale-form": ["productId", "quantity", "unitPrice"],
+  "tenant-settings-form": [
+    "name",
+    "locationText",
+    "currencyCode",
+    "referenceSchedule",
+    "status",
+  ],
+} as const;
+
+/** In-memory allowlist only: never preserve credentials or cross-context input. */
+export function captureSafeFormInputs(
+  container: ParentNode,
+): Record<string, string> {
+  const values: Record<string, string> = {};
+  for (const [id, names] of Object.entries(draftFields)) {
+    for (const name of names) {
+      const field = container.querySelector<
+        HTMLInputElement | HTMLSelectElement
+      >(`#${id} [name="${name}"]`);
+      if (field !== null) values[`${id}:${name}`] = field.value;
+    }
+  }
+  return values;
+}
+
+function restoreSafeFormInputs(): void {
+  for (const [id, names] of Object.entries(draftFields)) {
+    for (const name of names) {
+      const field = document.querySelector<
+        HTMLInputElement | HTMLSelectElement
+      >(`#${id} [name="${name}"]`);
+      const value = safeDrafts[`${id}:${name}`];
+      if (field !== null && value !== undefined) field.value = value;
+    }
+  }
+}
 
 function effectiveCapabilities(
   session: CapabilityAwareDemoWebSession,
@@ -384,6 +430,20 @@ async function loadOperationalDashboard(
         );
       },
     });
+  const previous = mountedController;
+  mountedController = controller;
+  previous?.clear();
+  controller.subscribe((next) => {
+    if (mountedController !== controller) return;
+    if (next === null) {
+      mountLogin(session.membership.role);
+      return;
+    }
+    mountDashboard(
+      session,
+      dashboardFromState(controller, next, session.membership.role),
+    );
+  });
   const state = await controller.load(context);
   if (state === null) throw new Error("DASHBOARD_CONTEXT_CHANGED");
   return dashboardFromState(controller, state, session.membership.role);
@@ -422,7 +482,7 @@ async function login(role: InventoryWebRole): Promise<void> {
     const sessionWithEmployees = await loadEmployees(session);
     mountDashboard(
       sessionWithEmployees,
-      await loadOperationalDashboard(session),
+      await loadOperationalDashboard(sessionWithEmployees),
     );
   } catch (error) {
     const suffix = error instanceof Error ? ` ${error.message}` : "";
@@ -450,8 +510,14 @@ function bindLogin(role: InventoryWebRole): void {
 }
 
 function mountLogin(role: InventoryWebRole): void {
-  mountedController?.clear();
+  const previous = mountedController;
   mountedController = null;
+  draftContext = null;
+  safeDrafts = {};
+  lastSaleStatus = "idle";
+  settingsPending = null;
+  confirmedSettings = null;
+  previous?.clear();
   root().innerHTML = renderDemoLogin(role);
   bindLogin(role);
 }
@@ -482,37 +548,109 @@ function tenantSettingsFromForm(
   };
 }
 
+export function bindFormSubmission(
+  form: HTMLFormElement,
+  resultTarget: HTMLElement | null | (() => HTMLElement | null),
+  action: () => Promise<string | null>,
+): (event: Pick<Event, "preventDefault">) => Promise<void> {
+  let pending = false;
+  const currentResult = (): HTMLElement | null =>
+    typeof resultTarget === "function" ? resultTarget() : resultTarget;
+  const handle = async (
+    event: Pick<Event, "preventDefault">,
+  ): Promise<void> => {
+    event.preventDefault();
+    if (pending) return;
+    pending = true;
+    const submit = form.querySelector<HTMLButtonElement>(
+      'button[type="submit"]',
+    );
+    if (submit?.disabled === true) {
+      pending = false;
+      return;
+    }
+    if (submit !== null) submit.disabled = true;
+    form.setAttribute("aria-busy", "true");
+    const initialResult = currentResult();
+    if (initialResult !== null) {
+      initialResult.setAttribute("role", "status");
+      initialResult.textContent = "Guardando…";
+    }
+    try {
+      const message = await action();
+      const result = currentResult();
+      if (result !== null && message !== null) result.textContent = message;
+    } catch (error) {
+      const result = currentResult();
+      if (result !== null) {
+        result.textContent = `No se pudo guardar. Conservamos los datos para reintentar.${error instanceof SafeWebApiError && error.correlationId !== null ? ` correlationId: ${error.correlationId}` : ""}`;
+        result.setAttribute("role", "alert");
+        result.setAttribute("tabindex", "-1");
+        result.focus();
+      }
+    } finally {
+      pending = false;
+      form.removeAttribute("aria-busy");
+      if (submit !== null) submit.disabled = false;
+    }
+  };
+  form.addEventListener("submit", (event) => {
+    void handle(event);
+  });
+  return handle;
+}
+
 function bindSettings(session: DemoWebSession): void {
-  document
-    .querySelector<HTMLFormElement>("#tenant-settings-form")
-    ?.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      if (!(form instanceof HTMLFormElement)) return;
-      const result = document.querySelector<HTMLElement>("#settings-result");
-      void readApi<DemoTenantSession>(
-        "/tenants/current/settings",
-        session.sessionId,
-        {
-          method: "PATCH",
-          body: JSON.stringify(tenantSettingsFromForm(form)),
-        },
-      )
-        .then((tenant) => {
-          if (result !== null) {
-            result.textContent = "Configuracion actualizada.";
-          }
-          void reloadDashboard({ ...session, tenant });
-        })
-        .catch((error: unknown) => {
-          if (result !== null) {
-            result.textContent =
-              error instanceof Error
-                ? `No se pudo guardar: ${error.message}`
-                : "No se pudo guardar.";
-          }
-        });
-    });
+  const form = document.querySelector<HTMLFormElement>("#tenant-settings-form");
+  if (form === null) return;
+  const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+  if (submit !== null) submit.disabled = settingsPending === session.sessionId;
+  if (settingsPending === session.sessionId) {
+    const result = document.querySelector("#settings-result");
+    if (result !== null) result.textContent = "Guardando…";
+  }
+  bindFormSubmission(
+    form,
+    () =>
+      mountedController?.snapshot()?.context?.sessionId === session.sessionId
+        ? document.querySelector("#settings-result")
+        : null,
+    async () => {
+      if (settingsPending === session.sessionId) return null;
+      settingsPending = session.sessionId;
+      try {
+        const tenant = await readApi<DemoTenantSession>(
+          "/tenants/current/settings",
+          session.sessionId,
+          {
+            method: "PATCH",
+            body: JSON.stringify(tenantSettingsFromForm(form)),
+          },
+        );
+        const title = document.querySelector(".app-topbar h1 + p");
+        if (
+          title !== null &&
+          mountedController?.snapshot()?.context?.sessionId ===
+            session.sessionId
+        ) {
+          confirmedSettings = { sessionId: session.sessionId, tenant };
+          title.textContent = tenant.name;
+        }
+        return "Configuracion actualizada.";
+      } finally {
+        if (settingsPending === session.sessionId) settingsPending = null;
+        if (
+          mountedController?.snapshot()?.context?.sessionId ===
+          session.sessionId
+        ) {
+          const currentSubmit = document.querySelector<HTMLButtonElement>(
+            '#tenant-settings-form button[type="submit"]',
+          );
+          if (currentSubmit !== null) currentSubmit.disabled = false;
+        }
+      }
+    },
+  );
 }
 
 function bindDashboard(session: DemoWebSession, data: LoadedDashboard): void {
@@ -523,6 +661,25 @@ function bindDashboard(session: DemoWebSession, data: LoadedDashboard): void {
   bindQuickSale(session, data);
   bindPostSaleRetry(session, data);
   bindNavigation();
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-retry-resource]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const key = button.dataset["retryResource"];
+        if (
+          key === undefined ||
+          !(key in data.state.resources) ||
+          !effectiveCapabilities(session).includes(
+            readCapabilities[key as keyof BrowserDashboardResources],
+          )
+        )
+          return;
+        button.disabled = true;
+        void data.controller.retryResources([
+          key as keyof BrowserDashboardResources,
+        ]);
+      });
+    });
 }
 
 function bindNavigation(): void {
@@ -555,17 +712,11 @@ function bindPostSaleRetry(
       const button = event.currentTarget;
       if (!(button instanceof HTMLButtonElement)) return;
       button.disabled = true;
-      void dashboard.controller.retryStale().then((state) => {
-        if (state === null) return;
-        mountDashboard(
-          session,
-          dashboardFromState(
-            dashboard.controller,
-            state,
-            session.membership.role,
-          ),
-        );
-      });
+      const capabilities = effectiveCapabilities(session);
+      const authorized = (
+        Object.keys(readCapabilities) as (keyof BrowserDashboardResources)[]
+      ).filter((key) => capabilities.includes(readCapabilities[key]));
+      void dashboard.controller.retryResources(authorized);
     });
 }
 
@@ -621,69 +772,60 @@ function bindQuickSale(
   price?.addEventListener("input", updateQuickSaleTotal);
   updateQuickSaleTotal();
 
-  document
-    .querySelector<HTMLFormElement>("#quick-sale-form")
-    ?.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      if (!(form instanceof HTMLFormElement)) return;
-      const result = document.querySelector<HTMLElement>("#quick-sale-result");
-      const submit = form.querySelector<HTMLButtonElement>(
-        'button[type="submit"]',
-      );
+  const form = document.querySelector<HTMLFormElement>("#quick-sale-form");
+  if (form === null) return;
+  bindFormSubmission(
+    form,
+    document.querySelector<HTMLElement>("#quick-sale-result"),
+    async () => {
       const data = new FormData(form);
       const idempotencyKey = globalThis.crypto.randomUUID();
-      if (submit !== null) submit.disabled = true;
-      void dashboard.controller
-        .submitSale({
-          idempotencyKey,
-          create: () =>
-            readApi<QuickSaleRecord>(
-              "/tenants/current/sales",
-              session.sessionId,
-              {
-                method: "POST",
-                headers: { "Idempotency-Key": idempotencyKey },
-                body: JSON.stringify({
-                  items: [
-                    {
-                      productId: formText(data, "productId"),
-                      quantity: Number(formText(data, "quantity")),
-                      unitPrice: Number(formText(data, "unitPrice")),
-                    },
-                  ],
-                }),
-              },
-            ),
-        })
-        .then((state) => {
-          if (state === null) return;
-          mountDashboard(
-            session,
-            dashboardFromState(
-              dashboard.controller,
-              state,
-              session.membership.role,
-            ),
-          );
-        })
-        .catch((error: unknown) => {
-          if (submit !== null) submit.disabled = false;
-          if (result !== null) {
-            result.textContent =
-              error instanceof Error
-                ? `No se pudo vender: ${error.message}`
-                : "No se pudo vender.";
-          }
-        });
-    });
-}
-
-async function reloadDashboard(session: DemoWebSession): Promise<void> {
-  mountDashboard(session, await loadOperationalDashboard(session));
+      await dashboard.controller.submitSale({
+        idempotencyKey,
+        create: () =>
+          readApi<QuickSaleRecord>(
+            "/tenants/current/sales",
+            session.sessionId,
+            {
+              method: "POST",
+              headers: { "Idempotency-Key": idempotencyKey },
+              body: JSON.stringify({
+                items: [
+                  {
+                    productId: formText(data, "productId"),
+                    quantity: Number(formText(data, "quantity")),
+                    unitPrice: Number(formText(data, "unitPrice")),
+                  },
+                ],
+              }),
+            },
+          ),
+      });
+      return null;
+    },
+  );
 }
 
 function mountDashboard(session: DemoWebSession, data: LoadedDashboard): void {
+  if (confirmedSettings?.sessionId === session.sessionId) {
+    session = { ...session, tenant: confirmedSettings.tenant };
+  }
+  if (draftContext === data.state.contextKey) {
+    safeDrafts = { ...safeDrafts, ...captureSafeFormInputs(document) };
+  } else {
+    safeDrafts = {};
+    lastSaleStatus = "idle";
+  }
+  draftContext = data.state.contextKey;
+  if (
+    data.state.sale.status === "succeeded" &&
+    lastSaleStatus !== "succeeded"
+  ) {
+    for (const key of Object.keys(safeDrafts)) {
+      if (key.startsWith("quick-sale-form:")) delete safeDrafts[key];
+    }
+  }
+  lastSaleStatus = data.state.sale.status;
   if (mountedController !== null && mountedController !== data.controller) {
     mountedController.clear();
   }
@@ -709,7 +851,15 @@ function mountDashboard(session: DemoWebSession, data: LoadedDashboard): void {
     { sale: data.state.sale, resources: data.state.resources },
     { capabilities, requestedHref: navigation.currentHref },
   );
+  restoreSafeFormInputs();
   bindDashboard(session, data);
+  if (data.state.sale.status === "error") {
+    const summary = document.querySelector<HTMLElement>(
+      '.sale-synchronization[role="alert"]',
+    );
+    summary?.setAttribute("tabindex", "-1");
+    summary?.focus();
+  }
 }
 
 async function restoreSession(role: InventoryWebRole): Promise<void> {
@@ -726,7 +876,7 @@ async function restoreSession(role: InventoryWebRole): Promise<void> {
     const sessionWithEmployees = await loadEmployees(session);
     mountDashboard(
       sessionWithEmployees,
-      await loadOperationalDashboard(session),
+      await loadOperationalDashboard(sessionWithEmployees),
     );
   } catch {
     globalThis.sessionStorage.removeItem("BODEGIA_DEMO_SESSION");
@@ -734,4 +884,4 @@ async function restoreSession(role: InventoryWebRole): Promise<void> {
   }
 }
 
-void restoreSession(selectedRole());
+if (typeof document !== "undefined") void restoreSession(selectedRole());

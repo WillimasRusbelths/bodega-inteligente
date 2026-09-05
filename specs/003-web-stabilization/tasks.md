@@ -121,13 +121,13 @@ estado y las invocaciones directas no autorizadas continúan rechazadas por el b
 
 **Propósito**: hacer inequívocos carga, vacío, error, contenido y desactualización parcial.
 
-- [ ] T048 [P] [HU-003] Completar pruebas de render por región para loading/ready/empty/error/stale sin convertir arreglos vacíos durante carga en ceros confirmados — FR-005, FR-012, FR-013, FR-016, FR-022, SC-006 — `apps/web/test/web-stabilization-states.spec.ts`
-- [ ] T049 [P] [HU-003] Escribir pruebas de `SafeWebApiError` para conservar status, code y `correlationId`, y limpiar estado operativo ante 401 sin revelar recursos en 403/404 — FR-014, FR-021, FR-022, SC-006 — `apps/web/test/safe-web-errors.spec.ts`
-- [ ] T050 [P] [HU-003] Escribir pruebas de formularios para conservar entradas seguras, bloquear doble envío y distinguir fallo recuperable, éxito confirmado y resultado stale — FR-005, FR-014, FR-015, FR-022, NFR-005, SC-006 — `apps/web/test/web-stabilization-forms.spec.ts`
-- [ ] T051 [HU-003] Implementar componentes/funciones de render comunes para estado de superficie, vacío específico, error seguro, stale y reintento autorizado — FR-005, FR-012, FR-013, FR-014, FR-016 — `apps/web/src/features/dashboard/surface-state-view.ts`, `apps/web/src/demo/mvp-demo.ts`
-- [ ] T052 [HU-003] Preservar metadatos seguros de error y soportar AbortSignal en la capa HTTP sin exponer detalles internos — FR-014, FR-021, SC-006 — `apps/web/src/api/client.ts`
-- [ ] T053 [HU-003] Integrar estados de formularios de venta/configuración, conservación de entradas y foco al resumen de error recuperable — FR-014, FR-015, FR-020, NFR-005, SC-006, SC-008 — `apps/web/src/demo/browser.ts`, `apps/web/src/demo/mvp-demo.ts`
-- [ ] T054 [HU-003] Unificar terminología de stock de producto, stock por lote, costos, valorización, acciones y mensajes en todas las superficies — FR-016, SC-001, SC-006 — `apps/web/src/demo/mvp-demo.ts`, `apps/web/src/features/inventory-dashboard.ts`, `apps/web/src/features/bi/inventory-bi-dashboard.ts`
+- [x] T048 [P] [HU-003] Completar pruebas de render por región para loading/ready/empty/error/stale sin convertir arreglos vacíos durante carga en ceros confirmados — FR-005, FR-012, FR-013, FR-016, FR-022, SC-006 — `apps/web/test/web-stabilization-states.spec.ts`
+- [x] T049 [P] [HU-003] Escribir pruebas de `SafeWebApiError` para conservar status, code y `correlationId`, y limpiar estado operativo ante 401 sin revelar recursos en 403/404 — FR-014, FR-021, FR-022, SC-006 — `apps/web/test/safe-web-errors.spec.ts`
+- [x] T050 [P] [HU-003] Escribir pruebas de formularios para conservar entradas seguras, bloquear doble envío y distinguir fallo recuperable, éxito confirmado y resultado stale — FR-005, FR-014, FR-015, FR-022, NFR-005, SC-006 — `apps/web/test/web-stabilization-forms.spec.ts`
+- [x] T051 [HU-003] Implementar componentes/funciones de render comunes para estado de superficie, vacío específico, error seguro, stale y reintento autorizado — FR-005, FR-012, FR-013, FR-014, FR-016 — `apps/web/src/features/dashboard/surface-state-view.ts`, `apps/web/src/demo/mvp-demo.ts`
+- [x] T052 [HU-003] Preservar metadatos seguros de error y soportar AbortSignal en la capa HTTP sin exponer detalles internos — FR-014, FR-021, SC-006 — `apps/web/src/api/client.ts`
+- [x] T053 [HU-003] Integrar estados de formularios de venta/configuración, conservación de entradas y foco al resumen de error recuperable — FR-014, FR-015, FR-020, NFR-005, SC-006, SC-008 — `apps/web/src/demo/browser.ts`, `apps/web/src/demo/mvp-demo.ts`
+- [x] T054 [HU-003] Unificar terminología de stock de producto, stock por lote, costos, valorización, acciones y mensajes en todas las superficies — FR-016, SC-001, SC-006 — `apps/web/src/demo/mvp-demo.ts`, `apps/web/src/features/inventory-dashboard.ts`, `apps/web/src/features/bi/inventory-bi-dashboard.ts`
 
 **Independent Test HU-003**: cada región diferencia los cinco estados, conserva correlationId cuando
 existe y permite recuperarse sin perder datos seguros ni repetir una venta confirmada.

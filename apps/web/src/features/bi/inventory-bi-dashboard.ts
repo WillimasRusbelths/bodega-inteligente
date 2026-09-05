@@ -1,5 +1,11 @@
 import type { InventoryWebRole } from "../../api/inventory-client.js";
 import { projectOperationalDataForContext } from "../../api/operational-data-adapter.js";
+import { SafeWebApiError } from "../../api/client.js";
+import {
+  resourceState,
+  type ResourceState,
+} from "../dashboard/operational-dashboard-state.js";
+import { renderSurfaceState } from "../dashboard/surface-state-view.js";
 import type {
   InventoryBiApi,
   AlertSummaryRow,
@@ -12,7 +18,11 @@ import type {
 export type BiResourceState<T> =
   | { readonly status: "IDLE" | "LOADING" }
   | { readonly status: "READY" | "EMPTY"; readonly data: T }
-  | { readonly status: "ERROR"; readonly message: string };
+  | {
+      readonly status: "ERROR";
+      readonly message: string;
+      readonly correlationId?: string;
+    };
 
 export interface InventoryBiResourceStates {
   readonly summary: BiResourceState<InventorySummary>;
@@ -32,6 +42,7 @@ export interface InventoryBiDashboardModel {
   readonly movementSummary: readonly MovementSummaryRow[];
   readonly alertsSummary: readonly AlertSummaryRow[];
   readonly error?: string;
+  readonly correlationId?: string;
   readonly resources?: InventoryBiResourceStates;
 }
 
@@ -85,7 +96,14 @@ export class InventoryBiDashboardController {
                 : "READY",
             data: result.value,
           }
-        : { status: "ERROR", message: safeError };
+        : {
+            status: "ERROR",
+            message: safeError,
+            ...(result.reason instanceof SafeWebApiError &&
+            result.reason.correlationId !== null
+              ? { correlationId: result.reason.correlationId }
+              : {}),
+          };
     const resources: InventoryBiResourceStates = {
       summary: asResource(results[0]),
       stockByCategory: asResource(results[1]),
@@ -108,10 +126,14 @@ export class InventoryBiDashboardController {
       resources.alertsSummary,
     ].every((resource) => resource.status === "ERROR");
     const isEmpty =
+      Object.values(resources).every(
+        (resource: BiResourceState<unknown>) => resource.status !== "ERROR",
+      ) &&
       summary !== undefined &&
       summary.totalProducts === 0 &&
       stockByCategory.length === 0 &&
       expirationRisk.length === 0 &&
+      movementSummary.length === 0 &&
       alertsSummary.length === 0;
     this.#state = projectInventoryBiDashboardModel({
       ...this.#state,
@@ -154,23 +176,78 @@ export function renderInventoryBiDashboard(
 ): string {
   const projectedModel = projectInventoryBiDashboardModel(model);
   const canViewCosts = projectedModel.role !== "seller";
-  if (projectedModel.status === "LOADING")
-    return '<main data-testid="bi-dashboard"><p role="status">Cargando indicadores…</p></main>';
-  if (projectedModel.status === "ERROR")
-    return `<main data-testid="bi-dashboard"><p role="alert">${escapeHtml(projectedModel.error ?? "Error")}</p></main>`;
+  if (
+    projectedModel.status === "LOADING" ||
+    projectedModel.status === "IDLE" ||
+    (projectedModel.status === "ERROR" &&
+      projectedModel.resources === undefined)
+  ) {
+    const state =
+      projectedModel.status === "LOADING"
+        ? resourceState.loading(0)
+        : projectedModel.status === "IDLE"
+          ? resourceState.idle()
+          : resourceState.error(
+              "No se pudieron cargar los indicadores.",
+              projectedModel.correlationId ?? null,
+              0,
+            );
+    return `<main data-testid="bi-dashboard">${renderSurfaceState({ resource: "indicators", label: "Indicadores", state, renderContent: () => "" })}</main>`;
+  }
   if (projectedModel.status === "EMPTY")
     return '<main data-testid="bi-dashboard"><h1>BI de inventario</h1><p data-testid="bi-empty">No hay datos de inventario.</p></main>';
   const summary = projectedModel.summary;
+  const region = (
+    key: keyof InventoryBiResourceStates,
+    label: string,
+    content: () => string,
+  ): string => {
+    const source = projectedModel.resources?.[key];
+    let state: ResourceState<unknown>;
+    if (source === undefined)
+      state =
+        key === "summary" && summary === undefined
+          ? resourceState.idle()
+          : resourceState.ready(null, "", 0);
+    else
+      switch (source.status) {
+        case "LOADING":
+          state = resourceState.loading(0);
+          break;
+        case "IDLE":
+          state = resourceState.idle();
+          break;
+        case "ERROR":
+          state = resourceState.error(
+            "No se pudo cargar la región BI.",
+            source.correlationId ?? null,
+            0,
+          );
+          break;
+        case "EMPTY":
+          state = resourceState.empty("", 0);
+          break;
+        case "READY":
+          state = resourceState.ready(source.data, "", 0);
+          break;
+      }
+    return renderSurfaceState({
+      resource: key,
+      label,
+      state,
+      renderContent: content,
+    });
+  };
   const valuation =
     canViewCosts && summary?.inventoryValuation !== undefined
-      ? `<dd data-testid="bi-valuation">${summary.inventoryValuation}</dd>`
+      ? `<dt>Valorizacion</dt><dd data-testid="bi-valuation">${summary.inventoryValuation}</dd>`
       : "";
   return `<main data-testid="bi-dashboard" data-role="${escapeHtml(projectedModel.role)}">
     <h1>BI de inventario</h1>
-    <dl data-testid="bi-kpis"><dt>Productos</dt><dd>${summary?.totalProducts ?? 0}</dd><dt>Stock disponible</dt><dd>${summary?.totalStockAvailable ?? 0}</dd><dt>Stock bajo</dt><dd>${summary?.lowStockProducts ?? 0}</dd><dt>Próximos a vencer</dt><dd>${summary?.productsExpiringSoon ?? 0}</dd><dt>Vencidos</dt><dd>${summary?.productsExpired ?? 0}</dd><dt>Alertas activas</dt><dd>${summary?.activeAlerts ?? 0}</dd>${valuation}</dl>
-    <section aria-labelledby="bi-category-title"><h2 id="bi-category-title">Stock por categoría</h2><table data-testid="bi-category-table"><tbody>${projectedModel.stockByCategory.map((row) => `<tr><td>${escapeHtml(row.categoryName)}</td><td>${row.stockAvailable}</td>${canViewCosts && row.inventoryValuation !== undefined ? `<td>${row.inventoryValuation}</td>` : ""}</tr>`).join("")}</tbody></table></section>
-    <section aria-labelledby="bi-expiration-title"><h2 id="bi-expiration-title">Riesgo de vencimiento</h2><table data-testid="bi-expiration-table"><tbody>${projectedModel.expirationRisk.map((row) => `<tr><td>${escapeHtml(row.productName)}</td><td>${escapeHtml(row.expiresAt)}</td><td>${escapeHtml(row.riskState)}</td>${canViewCosts && row.estimatedLoss !== undefined ? `<td>${row.estimatedLoss}</td>` : ""}</tr>`).join("")}</tbody></table></section>
-    <section aria-labelledby="bi-movement-title"><h2 id="bi-movement-title">Movimientos</h2><table data-testid="bi-movement-table"><tbody>${projectedModel.movementSummary.map((row) => `<tr><td>${escapeHtml(row.type)}</td><td>${row.movementCount}</td><td>${row.quantity}</td></tr>`).join("")}</tbody></table></section>
-    <section aria-labelledby="bi-alert-title"><h2 id="bi-alert-title">Alertas activas</h2><table data-testid="bi-alert-table"><tbody>${projectedModel.alertsSummary.map((row) => `<tr><td>${escapeHtml(row.type)}</td><td>${row.alertCount}</td></tr>`).join("")}</tbody></table></section>
+    ${region("summary", "Indicadores", () => `<dl data-testid="bi-kpis"><dt>Productos</dt><dd>${summary?.totalProducts}</dd><dt>Stock disponible</dt><dd>${summary?.totalStockAvailable}</dd><dt>Stock bajo</dt><dd>${summary?.lowStockProducts}</dd><dt>Próximos a vencer</dt><dd>${summary?.productsExpiringSoon}</dd><dt>Vencidos</dt><dd>${summary?.productsExpired}</dd><dt>Alertas activas</dt><dd>${summary?.activeAlerts}</dd>${valuation}</dl>`)}
+    <section aria-labelledby="bi-category-title"><h2 id="bi-category-title">Stock por categoría</h2>${region("stockByCategory", "Categorías", () => `<table data-testid="bi-category-table"><tbody>${projectedModel.stockByCategory.map((row) => `<tr><td>${escapeHtml(row.categoryName)}</td><td>${row.stockAvailable}</td>${canViewCosts && row.inventoryValuation !== undefined ? `<td>${row.inventoryValuation}</td>` : ""}</tr>`).join("")}</tbody></table>`)}</section>
+    <section aria-labelledby="bi-expiration-title"><h2 id="bi-expiration-title">Riesgo de vencimiento</h2>${region("expirationRisk", "Lotes en riesgo", () => `<table data-testid="bi-expiration-table"><tbody>${projectedModel.expirationRisk.map((row) => `<tr><td>${escapeHtml(row.productName)}</td><td>${escapeHtml(row.expiresAt)}</td><td>${escapeHtml(row.riskState)}</td>${canViewCosts && row.estimatedLoss !== undefined ? `<td>${row.estimatedLoss}</td>` : ""}</tr>`).join("")}</tbody></table>`)}</section>
+    <section aria-labelledby="bi-movement-title"><h2 id="bi-movement-title">Movimientos</h2>${region("movementSummary", "Movimientos", () => `<table data-testid="bi-movement-table"><tbody>${projectedModel.movementSummary.map((row) => `<tr><td>${escapeHtml(row.type)}</td><td>${row.movementCount}</td><td>${row.quantity}</td></tr>`).join("")}</tbody></table>`)}</section>
+    <section aria-labelledby="bi-alert-title"><h2 id="bi-alert-title">Alertas activas</h2>${region("alertsSummary", "Alertas", () => `<table data-testid="bi-alert-table"><tbody>${projectedModel.alertsSummary.map((row) => `<tr><td>${escapeHtml(row.type)}</td><td>${row.alertCount}</td></tr>`).join("")}</tbody></table>`)}</section>
   </main>`;
 }
