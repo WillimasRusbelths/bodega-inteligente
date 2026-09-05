@@ -14,7 +14,10 @@ import type {
   StockByCategoryRow,
 } from "../features/bi/inventory-bi-client.js";
 import { SafeWebApiError } from "../api/client.js";
-import { unwrapApiData } from "../api/operational-data-adapter.js";
+import {
+  projectOperationalDataForContext,
+  unwrapApiData,
+} from "../api/operational-data-adapter.js";
 import { OperationalDashboardController } from "../features/dashboard/operational-dashboard-controller.js";
 import type {
   OperationalDashboardState,
@@ -22,6 +25,7 @@ import type {
   WebSessionContext,
 } from "../features/dashboard/operational-dashboard-state.js";
 import { resolveCapabilityContext } from "../features/navigation/capability-context.js";
+import { resolveCapabilityNavigation } from "../features/navigation/capability-navigation.js";
 import {
   renderBodegiaDashboard,
   renderDemoLogin,
@@ -123,8 +127,15 @@ async function readApi<T>(
   return unwrapApiData<T>(payload);
 }
 
-async function loadEmployees(session: DemoWebSession): Promise<DemoWebSession> {
-  if (session.membership.role !== "owner_admin") return session;
+async function loadEmployees(
+  session: CapabilityAwareDemoWebSession,
+): Promise<DemoWebSession> {
+  const capabilities = effectiveCapabilities(session);
+  if (!capabilities.includes("access.memberships.read")) {
+    const { employees: _employees, ...safeSession } = session;
+    void _employees;
+    return safeSession;
+  }
   const employees = await readApi<readonly DemoEmployee[]>(
     "/tenants/current/memberships",
     session.sessionId,
@@ -188,10 +199,12 @@ const emptyIndicators: OperationalIndicators = {
   alertsSummary: [],
 };
 
-function sessionContext(
+let mountedController: BrowserDashboardController | null = null;
+
+function effectiveCapabilities(
   session: CapabilityAwareDemoWebSession,
-): WebSessionContext {
-  const capabilities = resolveCapabilityContext({
+): readonly string[] {
+  return resolveCapabilityContext({
     ...(session.activeTenant === undefined
       ? {}
       : { activeTenant: session.activeTenant }),
@@ -200,6 +213,12 @@ function sessionContext(
       : { effectivePermissions: session.effectivePermissions }),
     demoRole: session.membership.role,
   }).capabilities;
+}
+
+function sessionContext(
+  session: CapabilityAwareDemoWebSession,
+): WebSessionContext {
+  const capabilities = effectiveCapabilities(session);
   return {
     sessionId: session.sessionId,
     tenantId: session.tenant.id,
@@ -219,11 +238,18 @@ function dashboardFromState(
   state: BrowserDashboardState,
   role: InventoryWebRole,
 ): LoadedDashboard {
+  const projectionContext = {
+    role,
+    capabilities: state.context?.capabilities ?? [],
+  };
   const products = resourceData(state.resources.products, {
     items: [],
     data: [],
   });
-  const indicators = resourceData(state.resources.indicators, emptyIndicators);
+  const indicators = projectOperationalDataForContext(
+    resourceData(state.resources.indicators, emptyIndicators),
+    projectionContext,
+  );
   return {
     controller,
     state,
@@ -234,8 +260,14 @@ function dashboardFromState(
     operationalData: {
       role,
       products: products.items,
-      lots: resourceData(state.resources.lots, []),
-      balances: resourceData(state.resources.balances, []),
+      lots: projectOperationalDataForContext(
+        resourceData(state.resources.lots, []),
+        projectionContext,
+      ),
+      balances: projectOperationalDataForContext(
+        resourceData(state.resources.balances, []),
+        projectionContext,
+      ),
       movements: resourceData(state.resources.movements, []),
       alerts: resourceData(state.resources.alerts, []),
       fefo: {
@@ -251,8 +283,13 @@ function dashboardFromState(
 
 /** Reads the active tenant aggregate; the API remains the sole stock authority. */
 async function loadOperationalDashboard(
-  session: DemoWebSession,
+  session: CapabilityAwareDemoWebSession,
 ): Promise<LoadedDashboard> {
+  const context = sessionContext(session);
+  const projectionContext = {
+    role: session.membership.role,
+    capabilities: context.capabilities,
+  };
   const controller =
     new OperationalDashboardController<BrowserDashboardResources>({
       products: ({ context, signal }) =>
@@ -260,34 +297,46 @@ async function loadOperationalDashboard(
           "/tenants/current/products",
           context.sessionId,
           { signal },
+        ).then((value) =>
+          projectOperationalDataForContext(value, projectionContext),
         ),
       lots: ({ context, signal }) =>
         readApi<Page<Lot>>("/tenants/current/lots", context.sessionId, {
           signal,
-        }).then((page) => page.items),
+        }).then((page) =>
+          projectOperationalDataForContext(page.items, projectionContext),
+        ),
       balances: ({ context, signal }) =>
         readApi<Page<InventoryBalance>>(
           "/tenants/current/inventory/balances",
           context.sessionId,
           { signal },
-        ).then((page) => page.items),
+        ).then((page) =>
+          projectOperationalDataForContext(page.items, projectionContext),
+        ),
       movements: ({ context, signal }) =>
         readApi<Page<InventoryMovement>>(
           "/tenants/current/inventory/movements",
           context.sessionId,
           { signal },
-        ).then((page) => page.items),
+        ).then((page) =>
+          projectOperationalDataForContext(page.items, projectionContext),
+        ),
       alerts: ({ context, signal }) =>
         readApi<Page<InventoryAlert>>(
           "/tenants/current/inventory/alerts",
           context.sessionId,
           { signal },
-        ).then((page) => page.items),
+        ).then((page) =>
+          projectOperationalDataForContext(page.items, projectionContext),
+        ),
       sales: ({ context, signal }) =>
         readApi<readonly QuickSaleRecord[]>(
           "/tenants/current/sales",
           context.sessionId,
           { signal },
+        ).then((value) =>
+          projectOperationalDataForContext(value, projectionContext),
         ),
       indicators: async ({ context, signal }) => {
         const [
@@ -323,16 +372,19 @@ async function loadOperationalDashboard(
             { signal },
           ),
         ]);
-        return {
-          summary,
-          stockByCategory,
-          expirationRisk,
-          movementSummary,
-          alertsSummary,
-        };
+        return projectOperationalDataForContext(
+          {
+            summary,
+            stockByCategory,
+            expirationRisk,
+            movementSummary,
+            alertsSummary,
+          },
+          projectionContext,
+        );
       },
     });
-  const state = await controller.load(sessionContext(session));
+  const state = await controller.load(context);
   if (state === null) throw new Error("DASHBOARD_CONTEXT_CHANGED");
   return dashboardFromState(controller, state, session.membership.role);
 }
@@ -398,6 +450,8 @@ function bindLogin(role: InventoryWebRole): void {
 }
 
 function mountLogin(role: InventoryWebRole): void {
+  mountedController?.clear();
+  mountedController = null;
   root().innerHTML = renderDemoLogin(role);
   bindLogin(role);
 }
@@ -468,6 +522,27 @@ function bindDashboard(session: DemoWebSession, data: LoadedDashboard): void {
   bindSettings(session);
   bindQuickSale(session, data);
   bindPostSaleRetry(session, data);
+  bindNavigation();
+}
+
+function bindNavigation(): void {
+  const renderedCurrent = document.querySelector<HTMLElement>(
+    '.navigation-item[aria-current="page"]',
+  );
+  const renderedCurrentLink =
+    renderedCurrent?.querySelector<HTMLAnchorElement>("a");
+  renderedCurrent?.removeAttribute("aria-current");
+  renderedCurrentLink?.setAttribute("aria-current", "page");
+  document
+    .querySelectorAll<HTMLAnchorElement>(".navigation-item > a")
+    .forEach((link) => {
+      link.addEventListener("click", () => {
+        document
+          .querySelectorAll<HTMLAnchorElement>(".navigation-item > a")
+          .forEach((item) => item.removeAttribute("aria-current"));
+        link.setAttribute("aria-current", "page");
+      });
+    });
 }
 
 function bindPostSaleRetry(
@@ -609,12 +684,30 @@ async function reloadDashboard(session: DemoWebSession): Promise<void> {
 }
 
 function mountDashboard(session: DemoWebSession, data: LoadedDashboard): void {
+  if (mountedController !== null && mountedController !== data.controller) {
+    mountedController.clear();
+  }
+  mountedController = data.controller;
+  const capabilities =
+    data.state.context?.capabilities ?? effectiveCapabilities(session);
+  const navigation = resolveCapabilityNavigation({
+    capabilities,
+    requestedHref: globalThis.location.hash,
+  });
+  if (globalThis.location.hash !== navigation.currentHref) {
+    globalThis.history.replaceState(
+      null,
+      "",
+      `${globalThis.location.pathname}${globalThis.location.search}${navigation.currentHref}`,
+    );
+  }
   root().innerHTML = renderBodegiaDashboard(
     session.membership.role,
     session,
     data.salesData,
     data.operationalData,
     { sale: data.state.sale, resources: data.state.resources },
+    { capabilities, requestedHref: navigation.currentHref },
   );
   bindDashboard(session, data);
 }

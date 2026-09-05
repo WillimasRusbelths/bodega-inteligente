@@ -3,6 +3,7 @@ import type { WebApiClient } from "../src/api/client.js";
 import { InventoryBiApi } from "../src/features/bi/inventory-bi-client.js";
 import {
   InventoryBiDashboardController,
+  projectInventoryBiDashboardModel,
   renderInventoryBiDashboard,
 } from "../src/features/bi/inventory-bi-dashboard.js";
 
@@ -75,6 +76,70 @@ describe("inventory BI dashboard", () => {
     expect(html).toContain("Lácteos");
     expect(html).not.toContain("14");
     expect(html).not.toContain("valuation");
+  });
+
+  it("projects malformed seller BI data before rendering any state", () => {
+    const model = {
+      role: "seller" as const,
+      status: "READY" as const,
+      summary,
+      stockByCategory: [
+        {
+          categoryId: "c",
+          categoryName: "Lacteos",
+          stockAvailable: 4,
+          lowStockProducts: 1,
+          inventoryValuation: 104.4,
+        },
+      ],
+      expirationRisk: [
+        {
+          lotId: "l",
+          productId: "p",
+          productName: "Leche",
+          categoryName: "Lacteos",
+          expiresAt: "2027-01-01",
+          availableQuantity: 4,
+          riskState: "EXPIRING_SOON" as const,
+          estimatedLoss: 46.8,
+        },
+      ],
+      movementSummary: [],
+      alertsSummary: [],
+    };
+
+    const projected = projectInventoryBiDashboardModel(model);
+
+    expect(projected).toEqual({
+      ...model,
+      summary: {
+        totalProducts: 1,
+        totalStockAvailable: 4,
+        lowStockProducts: 1,
+        productsExpiringSoon: 1,
+        productsExpired: 0,
+        activeAlerts: 1,
+      },
+      stockByCategory: [
+        {
+          categoryId: "c",
+          categoryName: "Lacteos",
+          stockAvailable: 4,
+          lowStockProducts: 1,
+        },
+      ],
+      expirationRisk: [
+        {
+          lotId: "l",
+          productId: "p",
+          productName: "Leche",
+          categoryName: "Lacteos",
+          expiresAt: "2027-01-01",
+          availableQuantity: 4,
+          riskState: "EXPIRING_SOON",
+        },
+      ],
+    });
   });
 
   it("renders a safe error state", () => {

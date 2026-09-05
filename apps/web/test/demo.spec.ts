@@ -27,7 +27,7 @@ describe("BodeGIA MVP browser demo", () => {
     expect(html).not.toContain("accessToken");
   });
 
-  it("renders the requested session, configuration, employees, OLTP, DataMart, BI/OLAP, roles and roadmap sections", () => {
+  it("renders the authorized owner workspace with role management integrated into employees", () => {
     const html = renderBodegiaMvpDemo("owner_admin");
 
     expect(html).toContain("BodegIA MVP");
@@ -44,14 +44,16 @@ describe("BodeGIA MVP browser demo", () => {
     expect(html).toContain("Operacion OLTP");
     expect(html).toContain("Data Warehouse / DataMart de Inventario");
     expect(html).toContain("BI/OLAP");
-    expect(html).toContain("Permisos");
-    expect(html).toContain("Roadmap");
+    expect(html).toContain('data-testid="membership-role-management"');
+    expect(html).toContain("Gestion de roles y permisos");
+    expect(html).not.toContain('<section id="roles"');
+    expect(html).not.toContain('<section id="roadmap"');
+    expect(html).not.toContain('href="#roles"');
+    expect(html).not.toContain('href="#roadmap"');
     expect(html).toContain("public.products");
     expect(html).toContain("dw.dim_product");
     expect(html).toContain("dw.fact_inventory_movement");
     expect(html).toContain("OLTP</span><strong>DataMart dw</strong>");
-    expect(html).toContain("Ventas avanzadas y pagos complejos");
-    expect(html).toContain("Sistema final planificado");
   });
 
   it("keeps seller demo output free of valuation and cost fields", () => {
@@ -66,16 +68,19 @@ describe("BodeGIA MVP browser demo", () => {
     expect(html).not.toContain("Guardar configuraci&oacute;n");
     expect(html).toContain("Registrar venta");
     expect(html).toContain("Precio de venta");
-    expect(html).toContain("Acceso reservado para due");
+    expect(html).not.toContain('<section id="configuracion"');
+    expect(html).not.toContain('<section id="empleados"');
+    expect(html).not.toContain('data-testid="membership-role-management"');
   });
 
-  it("does not manufacture valuation for an administrative role without an API aggregate", () => {
+  it("does not manufacture valuation or mount owner-only analytics for inventory_manager", () => {
     const html = renderBodegiaDashboard("inventory_manager");
 
     expect(html).toContain("Valorizacion");
     expect(html).toContain("S/ 0.00");
     expect(html).not.toContain("S/ 680.60");
-    expect(html).toContain("Perdida estimada");
+    expect(html).not.toContain('<section id="warehouse"');
+    expect(html).not.toContain('<section id="bi"');
     expect(html).not.toContain("Guardar configuraci&oacute;n");
   });
 
@@ -87,7 +92,7 @@ describe("BodeGIA MVP browser demo", () => {
     expect(ownerHtml).toContain("Encargado demo");
     expect(ownerHtml).toContain("Vendedor demo");
     expect(ownerHtml).toContain("Ayacucho, Peru");
-    expect(sellerHtml).toContain("La administraci&oacute;n de empleados");
+    expect(sellerHtml).not.toContain('<section id="empleados"');
     expect(sellerHtml).not.toContain("Propietario demo</strong>");
   });
 });

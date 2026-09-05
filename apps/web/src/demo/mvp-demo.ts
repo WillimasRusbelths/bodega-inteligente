@@ -1,4 +1,5 @@
 import {
+  canViewCosts,
   operationalBalance,
   operationalLot,
   type InventoryAlert,
@@ -20,6 +21,13 @@ import type {
   ResourceState,
   SaleMutationState,
 } from "../features/dashboard/operational-dashboard-state.js";
+import { resolveCapabilityContext } from "../features/navigation/capability-context.js";
+import {
+  resolveCapabilityNavigation,
+  type CapabilityNavigation,
+} from "../features/navigation/capability-navigation.js";
+import { renderMembershipRoleManagement } from "../features/memberships/RoleEditor.js";
+import { projectOperationalDataForContext } from "../api/operational-data-adapter.js";
 
 export interface DemoTenantSession {
   readonly id: string;
@@ -57,6 +65,11 @@ export interface DemoWebSession {
   readonly tenant: DemoTenantSession;
   readonly membership: DemoMembershipSession;
   readonly employees?: readonly DemoEmployee[];
+}
+
+export interface DashboardPresentationContext {
+  readonly capabilities: readonly string[];
+  readonly requestedHref?: string;
 }
 
 export interface QuickSaleProduct {
@@ -162,20 +175,6 @@ function escapeHtml(value: string): string {
 
 function money(value: number): string {
   return `S/ ${value.toFixed(2)}`;
-}
-
-function canSeeValuation(role: InventoryWebRole): boolean {
-  return role !== "seller";
-}
-
-function canManageTenant(role: InventoryWebRole): boolean {
-  return role === "owner_admin";
-}
-
-function canSell(role: InventoryWebRole): boolean {
-  return (
-    role === "owner_admin" || role === "inventory_manager" || role === "seller"
-  );
 }
 
 const resourceLabels: Readonly<Record<DashboardResourceName, string>> = {
@@ -412,11 +411,14 @@ export function renderDemoLogin(
   </main>`;
 }
 
-function renderTopbar(role: InventoryWebRole, session: DemoWebSession): string {
-  const sellerNotice =
-    role === "seller"
-      ? '<span class="privacy-chip">Vista operativa: costos protegidos</span>'
-      : '<span class="privacy-chip">Costos visibles para rol autorizado</span>';
+function renderTopbar(
+  role: InventoryWebRole,
+  session: DemoWebSession,
+  capabilities: readonly string[],
+): string {
+  const sellerNotice = !canViewCosts(role, capabilities)
+    ? '<span class="privacy-chip">Vista operativa: costos protegidos</span>'
+    : '<span class="privacy-chip">Costos visibles para rol autorizado</span>';
   return `<header class="app-topbar">
     <div>
       <span class="mode-label">Sesi&oacute;n MVP web</span>
@@ -431,30 +433,20 @@ function renderTopbar(role: InventoryWebRole, session: DemoWebSession): string {
   </header>`;
 }
 
-function renderSidebar(): string {
-  const links = [
-    ["#inicio", "Inicio"],
-    ["#configuracion", "Configuracion de bodega"],
-    ["#empleados", "Empleados y roles"],
-    ["#ventas", "Ventas rapidas"],
-    ["#oltp", "Operacion OLTP"],
-    ["#warehouse", "Data Warehouse"],
-    ["#bi", "BI/OLAP"],
-    ["#roles", "Permisos"],
-    ["#roadmap", "Roadmap"],
-  ];
+function renderSidebar(navigation: CapabilityNavigation): string {
   return `<aside class="sidebar" aria-label="Navegacion principal">
     <div class="brand-block"><strong>BodegIA</strong><span>Inventario MVP</span></div>
-    <nav>${links.map(([href, label]) => `<a href="${href}">${label}</a>`).join("")}</nav>
+    <nav>${navigation.links.map((link) => `<span class="navigation-item" data-navigation-href="${link.href}"${link.href === navigation.currentHref ? ' aria-current="page"' : ""}><a href="${link.href}">${link.label}</a></span>`).join("")}</nav>
   </aside>`;
 }
 
 function renderExecutiveSummary(
   data: OperationalDashboardData,
+  capabilities: readonly string[],
   synchronization?: DashboardSynchronizationView,
 ): string {
   const summary = data.bi.summary;
-  const valuation = canSeeValuation(data.role)
+  const valuation = canViewCosts(data.role, capabilities)
     ? metricCard(
         "Valorizacion",
         money(summary.inventoryValuation ?? 0),
@@ -477,13 +469,6 @@ function renderExecutiveSummary(
 }
 
 function renderTenantSettings(session: DemoWebSession): string {
-  const role = session.membership.role;
-  if (!canManageTenant(role)) {
-    return `<section id="configuracion" class="panel locked-panel" aria-labelledby="configuracion-title">
-      <div class="section-heading"><span class="eyebrow">Configuracion</span><h2 id="configuracion-title">Configuraci&oacute;n de bodega</h2><p>Tu rol puede operar inventario, pero no administrar la configuraci&oacute;n de la bodega.</p></div>
-      <p class="permission-note">Acceso reservado para due&ntilde;o administrador.</p>
-    </section>`;
-  }
   return `<section id="configuracion" class="panel" aria-labelledby="configuracion-title">
     <div class="section-heading"><span class="eyebrow">Configuracion</span><h2 id="configuracion-title">Configuraci&oacute;n de bodega</h2><p>Actualizaci&oacute;n MVP tenant-scoped de la bodega activa.</p></div>
     <form id="tenant-settings-form" class="settings-form">
@@ -507,19 +492,25 @@ function employeeRows(employees: readonly DemoEmployee[]): string {
     .join("");
 }
 
-function renderEmployees(session: DemoWebSession): string {
-  if (!canManageTenant(session.membership.role)) {
-    return `<section id="empleados" class="panel locked-panel" aria-labelledby="empleados-title">
-      <div class="section-heading"><span class="eyebrow">Equipo</span><h2 id="empleados-title">Empleados y roles</h2><p>La administraci&oacute;n de empleados est&aacute; protegida por RBAC.</p></div>
-      <p class="permission-note">Solo el due&ntilde;o administrador puede ver y administrar empleados.</p>
-    </section>`;
-  }
+function renderEmployees(
+  session: DemoWebSession,
+  capabilities: readonly string[],
+): string {
   const employees =
     session.employees ?? defaultSession("owner_admin").employees ?? [];
+  const roleManagement = renderMembershipRoleManagement(
+    employees.map((employee) => ({
+      id: employee.id,
+      displayName: employee.displayName,
+      roles: [employee.role],
+      status: employee.status,
+    })),
+    capabilities,
+  );
   return `<section id="empleados" class="panel" aria-labelledby="empleados-title">
     <div class="section-heading"><span class="eyebrow">Equipo</span><h2 id="empleados-title">Empleados y roles</h2><p>Empleados demo asociados a la bodega activa.</p></div>
     <div class="table-wrap"><table><thead><tr><th>Empleado</th><th>Rol</th><th>Estado</th><th>Bodega</th></tr></thead><tbody>${employeeRows(employees)}</tbody></table></div>
-    <p class="permission-note">La creaci&oacute;n avanzada de empleados queda para el flujo administrativo completo; esta vista lista memberships reales del seed demo.</p>
+    ${roleManagement}
   </section>`;
 }
 
@@ -550,15 +541,9 @@ function quickSaleHistoryRows(sales: readonly QuickSaleRecord[]): string {
 }
 
 function renderQuickSales(
-  session: DemoWebSession,
   salesData: QuickSalesDashboardData,
   synchronization?: DashboardSynchronizationView,
 ): string {
-  if (!canSell(session.membership.role)) {
-    return `<section id="ventas" class="panel locked-panel" aria-labelledby="ventas-title">
-      <div class="section-heading"><span class="eyebrow">Ventas</span><h2 id="ventas-title">Ventas r&aacute;pidas</h2><p>Tu rol actual no puede registrar ventas.</p></div>
-    </section>`;
-  }
   const firstProduct = salesData.products[0];
   return `<section id="ventas" class="panel" aria-labelledby="ventas-title">
     <div class="section-heading"><span class="eyebrow">Ventas</span><h2 id="ventas-title">Ventas r&aacute;pidas</h2><p>Flujo MVP: seleccionar producto, cantidad, precio, descontar stock por FEFO y guardar historial.</p></div>
@@ -594,10 +579,14 @@ function productRows(products: readonly Product[]): string {
     .join("");
 }
 
-function lotRows(lots: readonly Lot[], role: InventoryWebRole): string {
+function lotRows(
+  lots: readonly Lot[],
+  role: InventoryWebRole,
+  capabilities: readonly string[],
+): string {
   return lots
     .map((lot) => {
-      const cost = canSeeValuation(role)
+      const cost = canViewCosts(role, capabilities)
         ? `<td>${money(lot.unitCost ?? 0)}</td>`
         : "";
       return `<tr><td>${lot.id.slice(-6)}</td><td>${escapeHtml(lot.expiresAt)}</td><td>${lot.availableQuantity}</td><td>${badge(lot.status)}</td>${cost}</tr>`;
@@ -625,16 +614,21 @@ function alertRows(alerts: readonly InventoryAlert[]): string {
 
 function renderOltp(
   data: OperationalDashboardData,
+  capabilities: readonly string[],
   synchronization?: DashboardSynchronizationView,
 ): string {
-  const lots = data.lots.map((lot) => operationalLot(lot, data.role));
+  const lots = data.lots.map((lot) =>
+    operationalLot(lot, data.role, capabilities),
+  );
   const balances = data.balances.map((balance) =>
-    operationalBalance(balance, data.role),
+    operationalBalance(balance, data.role, capabilities),
   );
   const categories = new Set(
     data.products.map((product) => product.category?.name ?? "Sin categoria"),
   );
-  const costHeader = canSeeValuation(data.role) ? "<th>Costo</th>" : "";
+  const costHeader = canViewCosts(data.role, capabilities)
+    ? "<th>Costo</th>"
+    : "";
   return `<section id="oltp" class="panel" aria-labelledby="oltp-title">
     <div class="section-heading"><span class="eyebrow">Operacion OLTP</span><h2 id="oltp-title">Operacion diaria de inventario</h2><p>OLTP registra las operaciones diarias de la bodega.</p></div>
     ${renderSurfaceState(synchronization, ["products", "lots", "balances", "movements", "alerts"], "Operaci&oacute;n de inventario")}
@@ -648,7 +642,7 @@ function renderOltp(
     </div>
     <div class="content-grid two-columns">
       <article class="card"><h3>Productos</h3><div class="table-wrap"><table><thead><tr><th>Producto</th><th>Categoria</th><th>Stock</th><th>Estado</th></tr></thead><tbody>${productRows(data.products)}</tbody></table></div></article>
-      <article class="card"><h3>Lotes y vencimientos</h3><div class="table-wrap"><table><thead><tr><th>Lote</th><th>Vence</th><th>Stock</th><th>Estado</th>${costHeader}</tr></thead><tbody>${lotRows(data.lots, data.role)}</tbody></table></div></article>
+      <article class="card"><h3>Lotes y vencimientos</h3><div class="table-wrap"><table><thead><tr><th>Lote</th><th>Vence</th><th>Stock</th><th>Estado</th>${costHeader}</tr></thead><tbody>${lotRows(data.lots, data.role, capabilities)}</tbody></table></div></article>
       <article class="card"><h3>Movimientos / Kardex</h3><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Cantidad</th><th>Delta</th><th>Motivo</th></tr></thead><tbody>${movementRows(data.movements)}</tbody></table></div></article>
       <article class="card"><h3>Alertas y FEFO</h3><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Estado</th><th>Valor</th><th>Umbral</th></tr></thead><tbody>${alertRows(data.alerts)}</tbody></table></div><div class="fefo-box"><span>Sugerencia FEFO</span><strong>${data.fefo.items[0]?.suggestedQuantity ?? 0} unidades</strong><small>Lote ${escapeHtml(data.fefo.items[0]?.lotId.slice(-6) ?? "N/D")} vence ${escapeHtml(data.fefo.items[0]?.expiresAt ?? "N/D")}</small></div></article>
     </div>
@@ -677,7 +671,7 @@ function renderWarehouse(): string {
     "public.inventory_alerts",
   ];
   return `<section id="warehouse" class="panel" aria-labelledby="warehouse-title">
-    <div class="section-heading"><span class="eyebrow">Data Warehouse</span><h2 id="warehouse-title">Data Warehouse / DataMart de Inventario</h2><p>El MVP implementa el DataMart de Inventario. Los DataMarts de ventas, clientes, compras y rentabilidad quedan como roadmap del sistema final.</p></div>
+    <div class="section-heading"><span class="eyebrow">Data Warehouse</span><h2 id="warehouse-title">Data Warehouse / DataMart de Inventario</h2><p>El MVP implementa el DataMart de Inventario autorizado para la bodega activa.</p></div>
     <div class="flow"><span>OLTP</span><strong>DataMart dw</strong><span>OLAP/BI</span><strong>Dashboard</strong></div>
     <div class="star-model" data-testid="datamart-model">
       <div class="source-list"><h3>Fuente OLTP</h3>${sources.map((source) => `<span>${source}</span>`).join("")}</div>
@@ -689,6 +683,7 @@ function renderWarehouse(): string {
 
 function renderBi(
   data: OperationalDashboardData,
+  capabilities: readonly string[],
   synchronization?: DashboardSynchronizationView,
 ): string {
   const maxStock = Math.max(
@@ -699,7 +694,7 @@ function renderBi(
     ...data.bi.movementSummary.map((row) => row.quantity),
     1,
   );
-  const valuation = canSeeValuation(data.role)
+  const valuation = canViewCosts(data.role, capabilities)
     ? metricCard(
         "Valorizacion BI",
         money(data.bi.summary.inventoryValuation ?? 0),
@@ -708,13 +703,13 @@ function renderBi(
     : "";
   const riskRows = data.bi.expirationRisk
     .map((row) => {
-      const loss = canSeeValuation(data.role)
+      const loss = canViewCosts(data.role, capabilities)
         ? `<td>${money(row.estimatedLoss ?? 0)}</td>`
         : "";
       return `<tr><td>${escapeHtml(row.productName)}</td><td>${escapeHtml(row.expiresAt)}</td><td>${row.availableQuantity}</td><td>${badge(row.riskState)}</td>${loss}</tr>`;
     })
     .join("");
-  const lossHeader = canSeeValuation(data.role)
+  const lossHeader = canViewCosts(data.role, capabilities)
     ? "<th>Perdida estimada</th>"
     : "";
   return `<section id="bi" class="panel" aria-labelledby="bi-title">
@@ -736,50 +731,6 @@ function renderBi(
   </section>`;
 }
 
-function renderRoles(): string {
-  const roles = [
-    [
-      "Due&ntilde;o administrador",
-      "Gestion completa; configuracion de bodega; empleados; costos; valorizacion; BI completo.",
-    ],
-    [
-      "Encargado de inventario",
-      "Control operativo; lotes; stock; alertas; FEFO; sin administracion de empleados.",
-    ],
-    [
-      "Vendedor",
-      "Consulta productos y stock; costos, valorizacion y configuracion protegidos.",
-    ],
-  ];
-  return `<section id="roles" class="panel" aria-labelledby="roles-title">
-    <div class="section-heading"><span class="eyebrow">Permisos</span><h2 id="roles-title">Acceso visible por rol demo</h2></div>
-    <div class="role-grid">${roles.map(([title, copy]) => `<article class="card"><h3>${title}</h3><p>${copy}</p></article>`).join("")}</div>
-  </section>`;
-}
-
-function renderRoadmap(): string {
-  const items = [
-    "APK Android",
-    "Login productivo hardening",
-    "Escaneo QR/codigo de barras",
-    "OCR de vencimientos",
-    "Ventas avanzadas y pagos complejos",
-    "Clientes",
-    "Proveedores",
-    "Compras/reabastecimiento",
-    "Promociones",
-    "Recomendacion de precios",
-    "DataMart de Ventas",
-    "DataMart de Clientes",
-    "DataMart de Compras",
-    "DataMart Financiero/Rentabilidad",
-  ];
-  return `<section id="roadmap" class="panel" aria-labelledby="roadmap-title">
-    <div class="section-heading"><span class="eyebrow">Roadmap</span><h2 id="roadmap-title">Sistema final planificado</h2><p>Estos elementos son futuros, no funcionalidades implementadas en la demo actual.</p></div>
-    <div class="roadmap-grid">${items.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>
-  </section>`;
-}
-
 export function renderBodegiaDashboard(
   role: InventoryWebRole = "owner_admin",
   session: DemoWebSession = defaultSession(role),
@@ -788,20 +739,37 @@ export function renderBodegiaDashboard(
     role,
   ),
   synchronization?: DashboardSynchronizationView,
+  presentation?: DashboardPresentationContext,
 ): string {
+  const capabilities =
+    presentation?.capabilities ??
+    resolveCapabilityContext({ demoRole: role }).capabilities;
+  const navigation = resolveCapabilityNavigation({
+    capabilities,
+    ...(presentation?.requestedHref === undefined
+      ? {}
+      : { requestedHref: presentation.requestedHref }),
+  });
+  const allowedDestinations = new Set(
+    navigation.links.map((link) => link.href),
+  );
+  const data = projectOperationalDataForContext(operationalData, {
+    role,
+    capabilities,
+  });
+  const authorized = (href: string, render: () => string): string =>
+    allowedDestinations.has(href) ? render() : "";
   return `<div class="app-shell" data-testid="demo-dashboard" data-role="${role}" data-session="${escapeHtml(session.sessionId)}">
-    ${renderSidebar()}
+    ${renderSidebar(navigation)}
     <main class="dashboard-main">
-      ${renderTopbar(operationalData.role, session)}
-      ${renderExecutiveSummary(operationalData, synchronization)}
-      ${renderTenantSettings(session)}
-      ${renderEmployees(session)}
-      ${renderQuickSales(session, salesData, synchronization)}
-      ${renderOltp(operationalData, synchronization)}
-      ${renderWarehouse()}
-      ${renderBi(operationalData, synchronization)}
-      ${renderRoles()}
-      ${renderRoadmap()}
+      ${renderTopbar(data.role, session, capabilities)}
+      ${authorized("#inicio", () => renderExecutiveSummary(data, capabilities, synchronization))}
+      ${authorized("#configuracion", () => renderTenantSettings(session))}
+      ${authorized("#empleados", () => renderEmployees(session, capabilities))}
+      ${authorized("#ventas", () => renderQuickSales(salesData, synchronization))}
+      ${authorized("#oltp", () => renderOltp(data, capabilities, synchronization))}
+      ${authorized("#warehouse", renderWarehouse)}
+      ${authorized("#bi", () => renderBi(data, capabilities, synchronization))}
     </main>
   </div>`;
 }

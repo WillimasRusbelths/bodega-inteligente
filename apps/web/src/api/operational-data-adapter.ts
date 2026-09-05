@@ -15,8 +15,64 @@ export interface OperationalProduct {
 
 type UnknownRecord = Readonly<Record<string, unknown>>;
 
+export interface OperationalDataProjectionContext {
+  readonly role: string;
+  readonly capabilities?: readonly string[];
+}
+
 function isRecord(value: unknown): value is UnknownRecord {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+export function canViewInventoryFinancials(
+  context: OperationalDataProjectionContext,
+): boolean {
+  if (context.role === "seller") return false;
+  return (
+    context.capabilities === undefined ||
+    context.capabilities.includes("inventory.lots.read")
+  );
+}
+
+function isRestrictedFinancialField(field: string): boolean {
+  const normalized = field.replace(/[^a-z0-9]/giu, "").toLowerCase();
+  return [
+    "cost",
+    "costo",
+    "valuation",
+    "valorizacion",
+    "estimatedloss",
+    "perdidaestimada",
+    "purchase",
+    "compra",
+  ].some((fragment) => normalized.includes(fragment));
+}
+
+function withoutRestrictedFinancialData(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => withoutRestrictedFinancialData(item));
+  }
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([field]) => !isRestrictedFinancialField(field))
+      .map(([field, nested]) => [
+        field,
+        withoutRestrictedFinancialData(nested),
+      ]),
+  );
+}
+
+/**
+ * Removes cost, valuation, estimated-loss and purchase-derived fields before
+ * unprivileged operational data reaches presentation code.
+ */
+export function projectOperationalDataForContext<T>(
+  input: T,
+  context: OperationalDataProjectionContext,
+): T {
+  if (canViewInventoryFinancials(context)) return input;
+  return withoutRestrictedFinancialData(input) as T;
 }
 
 /**
