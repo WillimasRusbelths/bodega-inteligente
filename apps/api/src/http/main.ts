@@ -54,7 +54,7 @@ function applyCorsHeaders(response: ServerResponse): void {
   }
   response.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, X-Demo-Session, X-Correlation-Id",
+    "Content-Type, X-Demo-Session, X-Correlation-Id, Idempotency-Key",
   );
   response.setHeader(
     "Access-Control-Allow-Methods",
