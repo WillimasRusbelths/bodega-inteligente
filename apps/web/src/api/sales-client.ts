@@ -39,14 +39,10 @@ export interface SaleRecord {
 type ApiEnvelope<T> = { readonly data: T } | T;
 
 function responseData<T>(response: ApiEnvelope<T>): T {
-  if (
-    response !== null &&
-    typeof response === "object" &&
-    "data" in response
-  ) {
+  if (response !== null && typeof response === "object" && "data" in response) {
     return (response as { readonly data: T }).data;
   }
-  return response as T;
+  return response;
 }
 
 /** A thin, retry-free wrapper around the established tenant-scoped sales API. */
@@ -58,7 +54,9 @@ export class SalesWebApi {
   }
 
   public async listSales(): Promise<readonly SaleRecord[]> {
-    const response = await this.#client.request<ApiEnvelope<readonly SaleRecord[]>>({
+    const response = await this.#client.request<
+      ApiEnvelope<readonly SaleRecord[]>
+    >({
       method: "GET",
       path: "/tenants/current/sales",
       authenticated: true,

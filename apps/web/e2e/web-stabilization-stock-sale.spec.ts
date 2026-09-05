@@ -20,7 +20,26 @@ test("keeps backend stock coherent and persists exactly one sale in local Postgr
   await page.goto(webUrl);
   await page.locator("#demo-username").fill("propietario");
   await page.locator("#demo-pin").fill("100001");
+  const initialLoadStartedAt = performance.now();
   await page.getByRole("button", { name: "Iniciar sesión" }).click();
+  await page.waitForFunction(() => {
+    const stock = document.querySelector<HTMLInputElement>("#quick-sale-stock");
+    const operational = document.querySelector("#oltp");
+    return (
+      stock?.value === "18" &&
+      operational?.textContent?.includes("Leche PostgreSQL T062") === true &&
+      operational.textContent.includes("18") &&
+      document
+        .querySelector("#inicio")
+        ?.textContent?.includes("Stock disponible18") === true &&
+      document
+        .querySelector("#bi")
+        ?.textContent?.includes("Stock disponible18") === true
+    );
+  });
+  const initialLoadElapsedMs = performance.now() - initialLoadStartedAt;
+  console.log(JSON.stringify({ initialLoadElapsedMs }));
+  expect(initialLoadElapsedMs).toBeLessThan(2_000);
   await expect(page.getByTestId("demo-dashboard")).toBeVisible();
   await expect(page.locator("#quick-sale-product")).toContainText(
     "Leche PostgreSQL T062",
@@ -34,7 +53,29 @@ test("keeps backend stock coherent and persists exactly one sale in local Postgr
   await expect(page.locator("#inicio")).toContainText("Stock disponible18");
   await expect(page.locator("#bi")).toContainText("Stock disponible18");
 
+  const postSaleStartedAt = performance.now();
   await page.getByRole("button", { name: "Registrar venta" }).click();
+  await page.waitForFunction(() => {
+    const stock = document.querySelector<HTMLInputElement>("#quick-sale-stock");
+    const operational = document.querySelector("#oltp");
+    const history = document.querySelector(
+      '[aria-label="Historial de ventas"]',
+    );
+    return (
+      stock?.value === "17" &&
+      operational?.textContent?.includes("17") === true &&
+      document
+        .querySelector("#inicio")
+        ?.textContent?.includes("Stock disponible17") === true &&
+      document
+        .querySelector("#bi")
+        ?.textContent?.includes("Stock disponible17") === true &&
+      history?.textContent?.includes("Leche PostgreSQL T062") === true
+    );
+  });
+  const postSaleElapsedMs = performance.now() - postSaleStartedAt;
+  console.log(JSON.stringify({ postSaleElapsedMs }));
+  expect(postSaleElapsedMs).toBeLessThan(2_000);
   await expect(page.locator("#quick-sale-stock")).toHaveValue("17");
   await expect(operationalProducts).toContainText("17");
   await expect(page.locator("#inicio")).toContainText("Stock disponible17");

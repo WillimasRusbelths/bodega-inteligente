@@ -76,9 +76,9 @@ const context: WebSessionContext = {
 
 function sequentialLoader<T>(first: T, second: T): TestLoader<T> {
   let call = 0;
-  return vi.fn(async () => {
+  return vi.fn(() => {
     call += 1;
-    return call === 1 ? first : second;
+    return Promise.resolve(call === 1 ? first : second);
   });
 }
 
@@ -145,7 +145,7 @@ describe("post-sale authoritative synchronization [T029]", () => {
         { availableStock: 11 },
       ),
     };
-    const createSale = vi.fn(async () => confirmedSale);
+    const createSale = vi.fn(() => Promise.resolve(confirmedSale));
     const controller = await createController(loaders);
 
     await controller.load(context);
@@ -225,7 +225,7 @@ describe("post-sale authoritative synchronization [T029]", () => {
           delayMs,
         ),
       };
-      const createSale = vi.fn(async () => confirmedSale);
+      const createSale = vi.fn(() => Promise.resolve(confirmedSale));
       const controller = await createController(loaders);
 
       await controller.load(context);

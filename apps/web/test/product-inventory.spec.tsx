@@ -44,11 +44,9 @@ const lot: Lot = {
   unitCost: 4.25,
 };
 
-function fakeApi(): {
-  readonly api: InventoryWebApi;
-  readonly request: ReturnType<typeof vi.fn>;
-} {
-  const request = vi.fn();
+function fakeApi() {
+  const request =
+    vi.fn<(input: { readonly path: string }) => Promise<unknown>>();
   const client = { request } as unknown as WebApiClient;
   return { api: new InventoryWebApi(client), request };
 }
@@ -77,13 +75,18 @@ describe("web inventory surfaces [T066, T068]", () => {
     request.mockResolvedValue({ items: [], nextCursor: null });
     const resources = await api.loadOperationalResources();
     expect(resources).toEqual({
-      products: { items: [], nextCursor: null }, lots: { items: [], nextCursor: null },
-      balances: { items: [], nextCursor: null }, movements: { items: [], nextCursor: null },
-      alerts: { items: [], nextCursor: null }, fefo: null,
+      products: { items: [], nextCursor: null },
+      lots: { items: [], nextCursor: null },
+      balances: { items: [], nextCursor: null },
+      movements: { items: [], nextCursor: null },
+      alerts: { items: [], nextCursor: null },
+      fefo: null,
     });
     expect(request.mock.calls.map(([call]) => call.path)).toEqual([
-      "/tenants/current/products", "/tenants/current/lots",
-      "/tenants/current/inventory/balances", "/tenants/current/inventory/movements",
+      "/tenants/current/products",
+      "/tenants/current/lots",
+      "/tenants/current/inventory/balances",
+      "/tenants/current/inventory/movements",
       "/tenants/current/inventory/alerts",
     ]);
   });

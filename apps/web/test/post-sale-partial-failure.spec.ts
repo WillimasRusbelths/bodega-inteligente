@@ -59,7 +59,7 @@ const context: WebSessionContext = {
 };
 
 function stableLoader(value: unknown): TestLoader {
-  return vi.fn(async () => value);
+  return vi.fn(() => Promise.resolve(value));
 }
 
 async function createController(
@@ -106,7 +106,7 @@ describe("post-sale partial failure recovery [T030]", () => {
       indicators: stableLoader({ availableStock: 7 }),
     };
     const confirmedSale = { id: "sale-1", saleNumber: "V-0001" };
-    const createSale = vi.fn(async () => confirmedSale);
+    const createSale = vi.fn(() => Promise.resolve(confirmedSale));
     const controller = await createController(loaders);
 
     await controller.load(context);

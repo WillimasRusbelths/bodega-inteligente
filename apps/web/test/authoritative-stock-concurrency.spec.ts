@@ -59,9 +59,9 @@ const productId = "00000000-0000-4000-8000-000000000301";
 
 function sequentialLoader(first: unknown, second: unknown): TestLoader {
   let call = 0;
-  return vi.fn(async () => {
+  return vi.fn(() => {
     call += 1;
-    return call === 1 ? first : second;
+    return Promise.resolve(call === 1 ? first : second);
   });
 }
 
@@ -115,10 +115,12 @@ async function synchronize(
   await controller.load(context);
   const state = await controller.submitSale({
     idempotencyKey: "sale-key-stock",
-    create: vi.fn(async () => ({
-      id: "sale-1",
-      items: [{ productId, quantity: 1 }],
-    })),
+    create: vi.fn(() =>
+      Promise.resolve({
+        id: "sale-1",
+        items: [{ productId, quantity: 1 }],
+      }),
+    ),
   });
   if (state === null) throw new Error("POST_SALE_STATE_NOT_AVAILABLE");
   return state;

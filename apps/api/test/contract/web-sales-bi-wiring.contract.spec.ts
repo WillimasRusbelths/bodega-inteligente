@@ -182,9 +182,7 @@ const biArrayRoutes = [
 
 describe("web inventory BI HTTP boundary wiring", () => {
   it("mounts GET inventory-summary with the minimal summary shape", async () => {
-    const result = await request(
-      "/tenants/current/bi/inventory-summary",
-    );
+    const result = await request("/tenants/current/bi/inventory-summary");
     const body = assertSafeJson(result);
     const data = record(body["data"]);
 
@@ -201,13 +199,16 @@ describe("web inventory BI HTTP boundary wiring", () => {
     }
   });
 
-  it.each(biArrayRoutes)("mounts GET %s with an array payload", async (path) => {
-    const result = await request(path);
-    const body = assertSafeJson(result);
+  it.each(biArrayRoutes)(
+    "mounts GET %s with an array payload",
+    async (path) => {
+      const result = await request(path);
+      const body = assertSafeJson(result);
 
-    expect(result.status).toBe(200);
-    expect(body["data"]).toEqual(expect.any(Array));
-  });
+      expect(result.status).toBe(200);
+      expect(body["data"]).toEqual(expect.any(Array));
+    },
+  );
 
   it("rejects a non-GET BI method with a safe error", async () => {
     const result = await request("/tenants/current/bi/inventory-summary", {

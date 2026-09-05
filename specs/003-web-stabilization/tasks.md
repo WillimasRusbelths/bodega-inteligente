@@ -169,14 +169,14 @@ sin overflow de página, superposición, pérdida de acciones ni mensajes imperc
 
 **Propósito**: cerrar trazabilidad, evidencia y calidad sin ampliar el sprint.
 
-- [ ] T067 [P] Ejecutar todas las suites unitarias y de integración web del sprint y registrar comandos, conteos y resultados observados — FR-001…FR-022, SC-001…SC-006 — `specs/003-web-stabilization/evidence/web-test-results.md`
-- [ ] T068 Ejecutar regresión API local de contrato, integración y seguridad para acceso, productos, lotes, inventario, FEFO, alertas, BI y ventas; documentar cero regresiones o bloqueadores reales — FR-011, FR-021, FR-023, FR-024, SC-004 — `specs/003-web-stabilization/evidence/api-regression-results.md`
-- [ ] T069 Ejecutar las suites Playwright del sprint en 320/768/1440 y registrar resultados de stock, roles, seller, recuperación, responsive y teclado — FR-018, FR-019, FR-020, FR-022, SC-001…SC-008 — `specs/003-web-stabilization/evidence/playwright-results.md`
-- [ ] T070 [P] Ejecutar lint, format check y TypeScript estricto del monorepo; documentar cualquier fallo sin silenciar reglas ni introducir `any` injustificado — FR-022, FR-024 — `specs/003-web-stabilization/evidence/quality-results.md`
-- [ ] T071 Consolidar mediciones locales de NFR-001 para carga inicial y postventa, registrando únicamente tiempos observados y carga perceptible cuando se excedan 2 segundos — FR-003, FR-012, NFR-001, SC-002, SC-006 — `specs/003-web-stabilization/evidence/local-timing.md`
-- [ ] T072 [P] Auditar el alcance final: sin snapshots operativos, cambios de esquema, nuevas reglas/endpoints, autenticación, superficies no aprobadas ni dependencias externas de ejecución — FR-001, FR-011, FR-024, NFR-006, SC-003 — `specs/003-web-stabilization/evidence/scope-audit.md`
-- [ ] T073 Completar matriz requisito → HU → tarea → prueba → evidencia para FR-001…FR-024 y SC-001…SC-008, incluyendo Constitution Check final — FR-001…FR-024, SC-001…SC-008 — `specs/003-web-stabilization/evidence/traceability-matrix.md`
-- [ ] T074 Ejecutar el gate final local tras T067–T073 y registrar aprobación o bloqueadores verificables sin marcar resultados no ejecutados — FR-022, FR-023, FR-024, SC-001…SC-008 — `specs/003-web-stabilization/evidence/final-local-gate.md`
+- [x] T067 [P] Ejecutar todas las suites unitarias y de integración web del sprint y registrar comandos, conteos y resultados observados — FR-001…FR-022, SC-001…SC-006 — `specs/003-web-stabilization/evidence/web-test-results.md`
+- [x] T068 Ejecutar regresión API local de contrato, integración y seguridad para acceso, productos, lotes, inventario, FEFO, alertas, BI y ventas; documentar cero regresiones o bloqueadores reales — FR-011, FR-021, FR-023, FR-024, SC-004 — `specs/003-web-stabilization/evidence/api-regression-results.md`
+- [x] T069 Ejecutar las suites Playwright del sprint en 320/768/1440 y registrar resultados de stock, roles, seller, recuperación, responsive y teclado — FR-018, FR-019, FR-020, FR-022, SC-001…SC-008 — `specs/003-web-stabilization/evidence/playwright-results.md`
+- [x] T070 [P] Ejecutar lint, format check y TypeScript estricto del monorepo; documentar cualquier fallo sin silenciar reglas ni introducir `any` injustificado — FR-022, FR-024 — `specs/003-web-stabilization/evidence/quality-results.md`
+- [x] T071 Consolidar mediciones locales de NFR-001 para carga inicial y postventa, registrando únicamente tiempos observados y carga perceptible cuando se excedan 2 segundos — FR-003, FR-012, NFR-001, SC-002, SC-006 — `specs/003-web-stabilization/evidence/local-timing.md`
+- [x] T072 [P] Auditar el alcance final: sin snapshots operativos, cambios de esquema, nuevas reglas/endpoints, autenticación, superficies no aprobadas ni dependencias externas de ejecución — FR-001, FR-011, FR-024, NFR-006, SC-003 — `specs/003-web-stabilization/evidence/scope-audit.md`
+- [x] T073 Completar matriz requisito → HU → tarea → prueba → evidencia para FR-001…FR-024 y SC-001…SC-008, incluyendo Constitution Check final — FR-001…FR-024, SC-001…SC-008 — `specs/003-web-stabilization/evidence/traceability-matrix.md`
+- [x] T074 Ejecutar el gate final local tras T067–T073 y registrar aprobación o bloqueadores verificables sin marcar resultados no ejecutados — FR-022, FR-023, FR-024, SC-001…SC-008 — `specs/003-web-stabilization/evidence/final-local-gate.md`
 
 ## Dependencies & Execution Order
 

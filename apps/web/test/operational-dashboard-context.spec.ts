@@ -28,7 +28,9 @@ async function loadContextGeneration(): Promise<ContextModule> {
   if (!existsSync(modulePath)) {
     throw new Error("[T019] operational-dashboard-state is required by T018.");
   }
-  const module = (await import(pathToFileURL(modulePath).href)) as Partial<ContextModule>;
+  const module = (await import(
+    pathToFileURL(modulePath).href
+  )) as Partial<ContextModule>;
   if (module.DashboardContextGeneration === undefined) {
     throw new Error(
       "[T019] DashboardContextGeneration export is required by T018.",

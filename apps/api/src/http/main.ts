@@ -887,12 +887,7 @@ export function createApiServer() {
       .then((handled) =>
         handled
           ? true
-          : handleInventoryReadRoute(
-              request,
-              response,
-              inventoryReads,
-              sales,
-            ),
+          : handleInventoryReadRoute(request, response, inventoryReads, sales),
       )
       .then((handled) =>
         handled ? true : handleSalesRoute(request, response, sales),

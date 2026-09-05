@@ -229,8 +229,7 @@ describe("web inventory HTTP boundary wiring", () => {
       expect(result.status).toBe(200);
       expect(body["items"]).toEqual(expect.any(Array));
       expect(
-        typeof body["nextCursor"] === "string" ||
-          body["nextCursor"] === null,
+        typeof body["nextCursor"] === "string" || body["nextCursor"] === null,
       ).toBe(true);
       if (path === "/tenants/current/products") {
         const item = (body["items"] as Record<string, unknown>[]).find(

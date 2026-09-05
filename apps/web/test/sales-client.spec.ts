@@ -22,7 +22,9 @@ async function loadSalesClient(): Promise<SalesClientModule> {
   if (!existsSync(modulePath)) {
     throw new Error("[T021] sales-client is required by T017.");
   }
-  const module = (await import(pathToFileURL(modulePath).href)) as Partial<SalesClientModule>;
+  const module = (await import(
+    pathToFileURL(modulePath).href
+  )) as Partial<SalesClientModule>;
   if (module.SalesWebApi === undefined) {
     throw new Error("[T021] SalesWebApi export is required by T017.");
   }

@@ -51,7 +51,12 @@ describe("operational dashboard resource state [T016]", () => {
       ready: state.ready(["product"], receivedAt, 7),
       empty: state.empty(receivedAt, 7),
       error: state.error("No se pudo cargar productos.", correlationId, 7),
-      stale: state.stale(["product"], "POST_SALE_REFRESH_FAILED", correlationId, 7),
+      stale: state.stale(
+        ["product"],
+        "POST_SALE_REFRESH_FAILED",
+        correlationId,
+        7,
+      ),
     }).toEqual({
       idle: { status: "idle" },
       loading: { status: "loading", cycle: 7 },

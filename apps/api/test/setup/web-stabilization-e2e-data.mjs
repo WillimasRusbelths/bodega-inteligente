@@ -16,7 +16,11 @@ const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
 const ids = {
   tenant: "00000000-0000-4000-8000-000000000001",
   owner: "00000000-0000-4000-8000-000000000011",
+  inventoryManager: "00000000-0000-4000-8000-000000000012",
+  seller: "00000000-0000-4000-8000-000000000013",
   membership: "00000000-0000-4000-8000-000000000101",
+  inventoryMembership: "00000000-0000-4000-8000-000000000102",
+  sellerMembership: "00000000-0000-4000-8000-000000000103",
   category: "00000000-0000-4000-8000-000000000961",
   unit: "00000000-0000-4000-8000-000000000962",
   product: "00000000-0000-4000-8000-000000000963",
@@ -44,10 +48,20 @@ async function cleanup() {
   await prisma.product.deleteMany({ where: { id: ids.product } });
   await prisma.unitOfMeasure.deleteMany({ where: { id: ids.unit } });
   await prisma.productCategory.deleteMany({ where: { id: ids.category } });
-  await prisma.user.updateMany({
-    where: { id: ids.owner },
-    data: { displayName: "Propietario demo" },
-  });
+  await Promise.all([
+    prisma.user.updateMany({
+      where: { id: ids.owner },
+      data: { displayName: "Propietario demo" },
+    }),
+    prisma.user.updateMany({
+      where: { id: ids.inventoryManager },
+      data: { displayName: "Encargado demo" },
+    }),
+    prisma.user.updateMany({
+      where: { id: ids.seller },
+      data: { displayName: "Vendedor demo" },
+    }),
+  ]);
 }
 
 async function setup() {
@@ -62,6 +76,28 @@ async function setup() {
       status: "ACTIVE",
     },
   });
+  await Promise.all([
+    prisma.user.upsert({
+      where: { id: ids.inventoryManager },
+      update: { displayName: "Encargado local T069", status: "ACTIVE" },
+      create: {
+        id: ids.inventoryManager,
+        displayName: "Encargado local T069",
+        phoneE164: "+51900000002",
+        status: "ACTIVE",
+      },
+    }),
+    prisma.user.upsert({
+      where: { id: ids.seller },
+      update: { displayName: "Vendedor local T069", status: "ACTIVE" },
+      create: {
+        id: ids.seller,
+        displayName: "Vendedor local T069",
+        phoneE164: "+51900000003",
+        status: "ACTIVE",
+      },
+    }),
+  ]);
   await prisma.tenant.upsert({
     where: { id: ids.tenant },
     update: { status: "ACTIVE" },
@@ -85,6 +121,38 @@ async function setup() {
       joinedAt: new Date("2026-09-04T00:00:00Z"),
     },
   });
+  await Promise.all([
+    prisma.membership.upsert({
+      where: { id: ids.inventoryMembership },
+      update: {
+        tenantId: ids.tenant,
+        userId: ids.inventoryManager,
+        status: "ACTIVE",
+      },
+      create: {
+        id: ids.inventoryMembership,
+        tenantId: ids.tenant,
+        userId: ids.inventoryManager,
+        status: "ACTIVE",
+        joinedAt: new Date("2026-09-04T00:00:00Z"),
+      },
+    }),
+    prisma.membership.upsert({
+      where: { id: ids.sellerMembership },
+      update: {
+        tenantId: ids.tenant,
+        userId: ids.seller,
+        status: "ACTIVE",
+      },
+      create: {
+        id: ids.sellerMembership,
+        tenantId: ids.tenant,
+        userId: ids.seller,
+        status: "ACTIVE",
+        joinedAt: new Date("2026-09-04T00:00:00Z"),
+      },
+    }),
+  ]);
   await prisma.productCategory.create({
     data: {
       id: ids.category,
@@ -168,12 +236,32 @@ async function verify() {
   );
 }
 
+async function verifyClean() {
+  const [products, lots, balances, saleItems, categories, units] =
+    await Promise.all([
+      prisma.product.count({ where: { id: ids.product } }),
+      prisma.lot.count({ where: { id: ids.lot } }),
+      prisma.inventoryBalance.count({
+        where: { productId: ids.product },
+      }),
+      prisma.saleItem.count({ where: { productId: ids.product } }),
+      prisma.productCategory.count({ where: { id: ids.category } }),
+      prisma.unitOfMeasure.count({ where: { id: ids.unit } }),
+    ]);
+  const remaining = { products, lots, balances, saleItems, categories, units };
+  if (Object.values(remaining).some((count) => count !== 0)) {
+    throw new Error(`T069 cleanup mismatch: ${JSON.stringify(remaining)}`);
+  }
+  process.stdout.write(JSON.stringify(remaining));
+}
+
 try {
   const command = process.argv[2];
   if (command === "setup") await setup();
   else if (command === "verify") await verify();
   else if (command === "cleanup") await cleanup();
-  else throw new Error("Use setup, verify or cleanup.");
+  else if (command === "verify-clean") await verifyClean();
+  else throw new Error("Use setup, verify, cleanup or verify-clean.");
 } finally {
   await prisma.$disconnect();
 }
