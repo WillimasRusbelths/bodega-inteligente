@@ -14,7 +14,7 @@
         --line: #dbe2e8;
         --accent: #18746d;
         --accent-strong: #0f5f59;
-        --warning: #b7791f;
+        --warning: #805414;
         --danger: #b83b3b;
         --ok: #237a4b;
         color: var(--ink);
@@ -33,6 +33,7 @@
       }
       body {
         margin: 0;
+        overflow-wrap: anywhere;
       }
       a {
         color: inherit;
@@ -41,6 +42,30 @@
       input,
       select {
         font: inherit;
+      }
+      button,
+      input:not([type="radio"]),
+      select {
+        min-width: 0;
+        max-width: 100%;
+        min-height: 44px;
+      }
+      button {
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+      :focus-visible {
+        outline: 3px solid var(--accent-strong);
+        outline-offset: 3px;
+      }
+      .sidebar :focus-visible {
+        outline-color: #ffffff;
+        outline-offset: -3px;
+      }
+      .sidebar a[aria-current="page"] {
+        background: #304552;
+        text-decoration: underline;
+        text-underline-offset: 4px;
       }
       .shell {
         min-height: 100vh;
@@ -125,16 +150,18 @@
         font-weight: 800;
         gap: 6px;
         text-transform: uppercase;
+        min-width: 0;
       }
       .login-form input,
       .settings-form input,
       .settings-form select {
         background: #ffffff;
-        border: 1px solid var(--line);
+        border: 1px solid #748594;
         border-radius: 10px;
         color: var(--ink);
         padding: 11px 12px;
         text-transform: none;
+        width: 100%;
       }
       .login-form .primary-action,
       .settings-form .primary-action,
@@ -198,6 +225,7 @@
         position: sticky;
         top: 0;
         height: 100vh;
+        overflow-y: auto;
       }
       .brand-block {
         display: grid;
@@ -215,6 +243,8 @@
         gap: 8px;
       }
       .sidebar a {
+        display: block;
+        min-height: 44px;
         border-radius: 10px;
         color: #eaf0f4;
         padding: 11px 12px;
@@ -255,6 +285,7 @@
       }
       .panel {
         padding: 20px;
+        min-width: 0;
       }
       .section-heading {
         margin-bottom: 16px;
@@ -325,6 +356,12 @@
       }
       .table-wrap {
         overflow-x: auto;
+        max-width: 100%;
+        min-width: 0;
+        overscroll-behavior-x: contain;
+      }
+      .table-wrap:focus-visible {
+        outline-offset: -3px;
       }
       table {
         border-collapse: collapse;
@@ -405,7 +442,7 @@
       .star-model {
         display: grid;
         gap: 14px;
-        grid-template-columns: 1fr 1.2fr 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
       }
       .source-list,
       .dimension-ring,
@@ -472,7 +509,7 @@
         .flow,
         .login-roles,
         .settings-form {
-          grid-template-columns: 1fr;
+          grid-template-columns: minmax(0, 1fr);
         }
         .app-topbar,
         .topbar-actions {
@@ -481,6 +518,10 @@
         }
       }
       @media (max-width: 560px) {
+        .sidebar nav {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+        }
         .login-screen {
           padding: 12px;
         }
@@ -495,6 +536,15 @@
         }
         .bar-row {
           grid-template-columns: 1fr;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          animation: none !important;
+          transition: none !important;
         }
       }
     </style>

@@ -1,4 +1,8 @@
 import type { WebApiClient } from "./client.js";
+import {
+  canViewInventoryFinancials,
+  projectOperationalDataForContext,
+} from "./operational-data-adapter.js";
 
 export type ProductStatus = "ACTIVE" | "INACTIVE";
 export type LotStatus = "AVAILABLE" | "DEPLETED" | "EXPIRED" | "INACTIVE";
@@ -117,6 +121,16 @@ export interface InventoryAlert {
 export interface Page<T> {
   readonly items: readonly T[];
   readonly nextCursor: string | null;
+}
+
+/** Authoritative reads needed by the operational dashboard aggregate. */
+export interface OperationalInventoryResources {
+  readonly products: Page<Product>;
+  readonly lots: Page<Lot>;
+  readonly balances: Page<InventoryBalance>;
+  readonly movements: Page<InventoryMovement>;
+  readonly alerts: Page<InventoryAlert>;
+  readonly fefo: FefoResult | null;
 }
 
 export interface ProductListQuery {
@@ -527,6 +541,31 @@ export class InventoryWebApi {
       })
       .then(page<InventoryAlert>);
   }
+
+  /** Reads existing inventory resources only; it does not derive stock locally. */
+  public async loadOperationalResources(fefo?: {
+    readonly productId: string;
+    readonly quantity: number;
+  }): Promise<OperationalInventoryResources> {
+    const [products, lots, balances, movements, alerts] = await Promise.all([
+      this.listProducts(),
+      this.listLots(),
+      this.listBalances(),
+      this.listMovements(),
+      this.listAlerts(),
+    ]);
+    return {
+      products,
+      lots,
+      balances,
+      movements,
+      alerts,
+      fefo:
+        fefo === undefined
+          ? null
+          : await this.suggestFefo(fefo.productId, fefo.quantity),
+    };
+  }
   public resolveAlert(
     id: string,
     reason: string,
@@ -549,30 +588,35 @@ export function canManageInventory(role: InventoryWebRole): boolean {
   return role === "owner_admin" || role === "inventory_manager";
 }
 
-export function canViewCosts(role: InventoryWebRole): boolean {
-  return role !== "seller";
+export function canViewCosts(
+  role: InventoryWebRole,
+  capabilities?: readonly string[],
+): boolean {
+  return canViewInventoryFinancials({
+    role,
+    ...(capabilities === undefined ? {} : { capabilities }),
+  });
 }
 
 /** Defensive projection: seller never receives cost fields in a rendered view. */
 export function operationalLot(
   lot: Lot,
   role: InventoryWebRole,
+  capabilities?: readonly string[],
 ): LotOperational {
-  if (canViewCosts(role)) return lot;
-  const { unitCost: _unitCost, ...operational } = lot;
-  void _unitCost;
-  return operational;
+  return projectOperationalDataForContext(lot, {
+    role,
+    ...(capabilities === undefined ? {} : { capabilities }),
+  });
 }
 
 export function operationalBalance(
   balance: InventoryBalance,
   role: InventoryWebRole,
+  capabilities?: readonly string[],
 ): Omit<InventoryBalance, "unitCost"> & { readonly unitCost?: never } {
-  if (canViewCosts(role))
-    return balance as Omit<InventoryBalance, "unitCost"> & {
-      readonly unitCost?: never;
-    };
-  const { unitCost: _unitCost, ...operational } = balance;
-  void _unitCost;
-  return operational;
+  return projectOperationalDataForContext(balance, {
+    role,
+    ...(capabilities === undefined ? {} : { capabilities }),
+  }) as Omit<InventoryBalance, "unitCost"> & { readonly unitCost?: never };
 }

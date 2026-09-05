@@ -1,4 +1,8 @@
-import type { Membership, RoleCode } from "./membership-admin.js";
+import {
+  canManageMembershipRoles,
+  type Membership,
+  type RoleCode,
+} from "./membership-admin.js";
 
 export interface RoleEditorApi {
   replaceRoles(input: {
@@ -38,7 +42,7 @@ export class RoleEditorController {
   }
 
   public get visible(): boolean {
-    return this.actorPermissions.includes("access.roles.manage");
+    return canManageMembershipRoles(this.actorPermissions);
   }
 
   public async save(roles: readonly RoleCode[], reason: string): Promise<void> {
@@ -85,4 +89,47 @@ export class RoleEditorController {
 
 export function RoleEditor(controller: RoleEditorController): EditorState {
   return controller.state;
+}
+
+export interface MembershipRoleView {
+  readonly id: string;
+  readonly displayName: string;
+  readonly roles: readonly string[];
+  readonly status: string;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+/**
+ * Framework-neutral view embedded by the Employees surface. It uses the same
+ * capability predicate as RoleEditorController and never replaces API guards.
+ */
+export function renderMembershipRoleManagement(
+  memberships: readonly MembershipRoleView[],
+  actorPermissions: readonly string[],
+): string {
+  if (!canManageMembershipRoles(actorPermissions)) return "";
+  const items = memberships
+    .map(
+      (
+        membership,
+      ) => `<article class="card membership-role-card" data-membership-id="${escapeHtml(membership.id)}">
+        <h4>${escapeHtml(membership.displayName)}</h4>
+        <p>Rol vigente: ${escapeHtml(membership.roles.join(", "))} &middot; ${escapeHtml(membership.status)}</p>
+        <p class="permission-note">Los cambios de rol y permisos se validan en el backend para esta pertenencia.</p>
+      </article>`,
+    )
+    .join("");
+  return `<div class="membership-role-management" data-testid="membership-role-management">
+    <h3>Gestion de roles y permisos</h3>
+    <p>Administracion integrada en Empleados para la bodega activa.</p>
+    <div class="role-grid">${items}</div>
+  </div>`;
 }

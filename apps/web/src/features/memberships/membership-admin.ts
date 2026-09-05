@@ -6,6 +6,16 @@ export type RoleCode = components["schemas"]["RoleCode"];
 export type ActivationIssue =
   components["schemas"]["ActivationChallengeIssueResponse"];
 
+export const MEMBERSHIP_ROLE_MANAGEMENT_CAPABILITY =
+  "access.roles.manage" as const;
+
+/** Shared presentation/controller rule; the backend remains authoritative. */
+export function canManageMembershipRoles(
+  actorPermissions: readonly string[],
+): boolean {
+  return actorPermissions.includes(MEMBERSHIP_ROLE_MANAGEMENT_CAPABILITY);
+}
+
 export interface MembershipAdminApi {
   list(): Promise<readonly Membership[]>;
   create(input: {

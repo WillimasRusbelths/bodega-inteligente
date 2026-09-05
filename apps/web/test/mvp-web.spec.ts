@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { AuditViewer } from "../src/features/audit/audit-viewer.js";
 import { MembershipAdmin } from "../src/features/memberships/membership-admin.js";
-import { RoleEditorController } from "../src/features/memberships/RoleEditor.js";
+import {
+  renderMembershipRoleManagement,
+  RoleEditorController,
+} from "../src/features/memberships/RoleEditor.js";
 import { StatusEditorController } from "../src/features/memberships/StatusEditor.js";
 
 const membership = {
@@ -85,6 +88,21 @@ describe("web MVP administration [T113-T116]", () => {
     );
     await editor.save(["seller"], "Synthetic role change");
     expect(editor.state).toMatchObject({ status: "STALE" });
+  });
+
+  it("integrates role management in employees only when the shared capability rule allows it", () => {
+    const ownerView = renderMembershipRoleManagement(
+      [membership],
+      ["access.roles.manage"],
+    );
+    const sellerView = renderMembershipRoleManagement(
+      [membership],
+      ["inventory.products.read", "sales.write"],
+    );
+
+    expect(ownerView).toContain('data-testid="membership-role-management"');
+    expect(ownerView).toContain(`data-membership-id="${membership.id}"`);
+    expect(sellerView).toBe("");
   });
 
   it("protects the last active owner from deactivation", async () => {

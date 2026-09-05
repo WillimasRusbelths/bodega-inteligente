@@ -65,6 +65,9 @@ importers:
       '@bodegia/api-contract':
         specifier: workspace:*
         version: link:../../packages/api-contract
+      '@bodegia/authz-catalog':
+        specifier: workspace:*
+        version: link:../../packages/authz-catalog
 
   packages/api-contract:
     devDependencies:

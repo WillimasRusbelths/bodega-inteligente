@@ -10,11 +10,22 @@ import {
   createTenantContextHarness,
   type TenantContext,
 } from "../modules/access/context/tenant-context.js";
+import { AlertsController } from "../modules/alerts/alerts.controller.js";
+import { AlertService } from "../modules/alerts/services/alert.service.js";
 import { BiController } from "../modules/bi/bi.controller.js";
 import { InventoryBiService } from "../modules/bi/inventory-bi.service.js";
+import { CatalogController } from "../modules/catalog/catalog.controller.js";
+import { InventoryController } from "../modules/inventory/inventory.controller.js";
+import { FefoRepository } from "../modules/inventory/repositories/fefo.repository.js";
+import { FefoService } from "../modules/inventory/services/fefo.service.js";
+import { InventoryBalanceService } from "../modules/inventory/services/inventory-balance.service.js";
+import { InventoryMovementService } from "../modules/inventory/services/inventory-movement.service.js";
+import { LotsController } from "../modules/lots/lots.controller.js";
+import { LotReceiptService } from "../modules/lots/services/lot-receipt.service.js";
 import {
   QuickSaleService,
   type QuickSaleInput,
+  type SaleProductResponse,
 } from "../modules/sales/quick-sale.service.js";
 
 const DEFAULT_PORT = 3000;
@@ -43,7 +54,7 @@ function applyCorsHeaders(response: ServerResponse): void {
   }
   response.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, X-Demo-Session, X-Correlation-Id",
+    "Content-Type, X-Demo-Session, X-Correlation-Id, Idempotency-Key",
   );
   response.setHeader(
     "Access-Control-Allow-Methods",
@@ -543,6 +554,86 @@ function biPath(pathname: string): string | null {
   return suffix.length === 0 ? null : suffix;
 }
 
+interface InventoryReadControllers {
+  readonly catalog: CatalogController;
+  readonly lots: LotsController;
+  readonly inventory: InventoryController;
+  readonly alerts: AlertsController;
+}
+
+function queryRecordFromUrl(url: URL): Record<string, unknown> {
+  return Object.fromEntries(
+    [...url.searchParams.entries()].map(([key, value]) => [
+      key,
+      key === "quantity" ? Number(value) : value,
+    ]),
+  );
+}
+
+function operationalProductResponse(
+  catalogResult: unknown,
+  salesProducts: readonly SaleProductResponse[],
+): Readonly<Record<string, unknown>> {
+  const page = record(catalogResult);
+  const rawItems = page["items"];
+  if (!Array.isArray(rawItems)) {
+    throw new Error("INVALID_OPERATIONAL_PRODUCT_RESPONSE");
+  }
+  const salesById = new Map(
+    salesProducts.map((product) => [product.id, product] as const),
+  );
+  const items = rawItems.map((value) => {
+    const product = record(value);
+    const id = product["id"];
+    const summary = typeof id === "string" ? salesById.get(id) : undefined;
+    return summary === undefined
+      ? product
+      : { ...product, availableStock: summary.availableStock };
+  });
+  return { ...page, items, data: salesProducts };
+}
+
+async function handleInventoryReadRoute(
+  request: IncomingMessage,
+  response: ServerResponse,
+  controllers: InventoryReadControllers,
+  sales: QuickSaleService,
+): Promise<boolean> {
+  if (request.method !== "GET") return false;
+  const url = new URL(request.url ?? "/", "http://localhost");
+  const pathname = url.pathname;
+  const supported = new Set([
+    "/tenants/current/products",
+    "/tenants/current/lots",
+    "/tenants/current/inventory/balances",
+    "/tenants/current/inventory/movements",
+    "/tenants/current/inventory/alerts",
+    "/tenants/current/inventory/fefo/suggestions",
+  ]);
+  if (!supported.has(pathname)) return false;
+
+  requireDemoSession(request);
+  const context = demoContext(request);
+  const query = queryRecordFromUrl(url);
+  const result =
+    pathname === "/tenants/current/products"
+      ? operationalProductResponse(
+          await controllers.catalog.listProducts(context, query),
+          await sales.listProducts(context),
+        )
+      : pathname === "/tenants/current/lots"
+        ? await controllers.lots.listTenantLots(context, query)
+        : pathname === "/tenants/current/inventory/balances"
+          ? await controllers.inventory.listBalances(context, query)
+          : pathname === "/tenants/current/inventory/movements"
+            ? await controllers.inventory.listMovements(context, query)
+            : pathname === "/tenants/current/inventory/alerts"
+              ? await controllers.alerts.list(context, query)
+              : await controllers.inventory.suggestFefo(context, query);
+  jsonResponse(response, 200, record(result));
+  return true;
+}
+
 async function handleBiRoute(
   request: IncomingMessage,
   response: ServerResponse,
@@ -762,6 +853,16 @@ export function createApiServer() {
   const prisma = new PrismaModule();
   const controller = new BiController(new InventoryBiService(prisma));
   const sales = new QuickSaleService(prisma);
+  const inventoryReads: InventoryReadControllers = {
+    catalog: new CatalogController(prisma),
+    lots: new LotsController(new LotReceiptService(prisma)),
+    inventory: new InventoryController(
+      new InventoryMovementService(prisma),
+      new InventoryBalanceService(prisma),
+      new FefoService(new FefoRepository(prisma)),
+    ),
+    alerts: new AlertsController(new AlertService(prisma)),
+  };
   const server = createServer((request, response) => {
     const id = correlationId(request);
 
@@ -782,6 +883,11 @@ export function createApiServer() {
     void handleDemoAuthRoute(request, response, prisma)
       .then((handled) =>
         handled ? true : handleTenantAdminRoute(request, response, prisma),
+      )
+      .then((handled) =>
+        handled
+          ? true
+          : handleInventoryReadRoute(request, response, inventoryReads, sales),
       )
       .then((handled) =>
         handled ? true : handleSalesRoute(request, response, sales),

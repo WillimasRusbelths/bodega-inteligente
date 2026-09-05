@@ -116,13 +116,14 @@ describe("FEFO integration [T053-T055]", () => {
     const b = await seed("B");
     const productA = await product(a.tenantId);
     const productB = await product(b.tenantId);
+    const now = Date.now();
     await client.lot.createMany({
       data: [
         {
           tenantId: a.tenantId,
           productId: productA,
-          receivedAt: new Date("2026-06-01T00:00:00Z"),
-          expiresAt: new Date("2026-08-01T00:00:00Z"),
+          receivedAt: new Date(now - 2 * 86_400_000),
+          expiresAt: new Date(now + 30 * 86_400_000),
           initialQuantity: 5,
           availableQuantity: 5,
           unitCost: 1,
@@ -131,8 +132,8 @@ describe("FEFO integration [T053-T055]", () => {
         {
           tenantId: a.tenantId,
           productId: productA,
-          receivedAt: new Date("2026-06-02T00:00:00Z"),
-          expiresAt: new Date("2026-07-25T00:00:00Z"),
+          receivedAt: new Date(now - 86_400_000),
+          expiresAt: new Date(now + 20 * 86_400_000),
           initialQuantity: 3,
           availableQuantity: 3,
           unitCost: 1,
@@ -151,8 +152,8 @@ describe("FEFO integration [T053-T055]", () => {
         {
           tenantId: b.tenantId,
           productId: productB,
-          receivedAt: new Date("2026-06-01T00:00:00Z"),
-          expiresAt: new Date("2026-07-20T00:00:00Z"),
+          receivedAt: new Date(now - 86_400_000),
+          expiresAt: new Date(now + 10 * 86_400_000),
           initialQuantity: 9,
           availableQuantity: 9,
           unitCost: 1,

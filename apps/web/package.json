@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@bodegia/api-contract": "workspace:*"
+    "@bodegia/api-contract": "workspace:*",
+    "@bodegia/authz-catalog": "workspace:*"
   },
   "scripts": {
     "build": "tsc && node scripts/prepare-static.mjs",
