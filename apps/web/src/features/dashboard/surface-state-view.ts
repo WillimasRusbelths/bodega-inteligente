@@ -34,10 +34,10 @@ export function renderSurfaceState<T>(input: {
       content = `<p role="status">Cargando ${label}…</p>`;
       break;
     case "empty":
-      content = `<p>No hay ${label} para la consulta actual.</p>`;
+      content = `<p role="status" aria-atomic="true">No hay ${label} para la consulta actual.</p>`;
       break;
     case "error":
-      content = `<p role="alert">No se pudieron cargar ${label}. Los datos anteriores no se muestran porque pueden estar desactualizados.</p><p data-correlation-id="${escapeSurfaceText(state.correlationId ?? "")}">correlationId: ${escapeSurfaceText(state.correlationId ?? "no disponible")}</p>${retry}`;
+      content = `<p role="alert" aria-atomic="true" data-correlation-id="${escapeSurfaceText(state.correlationId ?? "")}">No se pudieron cargar ${label}. Los datos anteriores no se muestran porque pueden estar desactualizados. correlationId: ${escapeSurfaceText(state.correlationId ?? "no disponible")}</p>${retry}`;
       break;
     case "stale":
       content = `<p role="status">${pending ? "Actualizando" : "Datos no sincronizados de"} ${label}. Los datos pueden estar desactualizados.</p>${state.correlationId === null ? "" : `<p>correlationId: ${escapeSurfaceText(state.correlationId)}</p>`}${state.receivedAt === undefined ? "" : `<p>Última lectura recibida: <time>${escapeSurfaceText(state.receivedAt)}</time></p>`}${input.renderContent(state.data)}${retry}`;

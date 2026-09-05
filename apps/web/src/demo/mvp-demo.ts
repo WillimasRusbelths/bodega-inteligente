@@ -458,7 +458,7 @@ function renderTopbar(
 function renderSidebar(navigation: CapabilityNavigation): string {
   return `<aside class="sidebar" aria-label="Navegacion principal">
     <div class="brand-block"><strong>BodegIA</strong><span>Inventario MVP</span></div>
-    <nav>${navigation.links.map((link) => `<span class="navigation-item" data-navigation-href="${link.href}"${link.href === navigation.currentHref ? ' aria-current="page"' : ""}><a href="${link.href}">${link.label}</a></span>`).join("")}</nav>
+    <nav aria-label="Navegacion principal">${navigation.links.map((link) => `<span class="navigation-item" data-navigation-href="${link.href}"${link.href === navigation.currentHref ? ' aria-current="page"' : ""}><a href="${link.href}">${link.label}</a></span>`).join("")}</nav>
   </aside>`;
 }
 
@@ -544,7 +544,7 @@ function renderEmployees(
   );
   return `<section id="empleados" class="panel" aria-labelledby="empleados-title">
     <div class="section-heading"><span class="eyebrow">Equipo</span><h2 id="empleados-title">Empleados y roles</h2><p>Empleados demo asociados a la bodega activa.</p></div>
-    <div class="table-wrap"><table><thead><tr><th>Empleado</th><th>Rol</th><th>Estado</th><th>Bodega</th></tr></thead><tbody>${employeeRows(employees)}</tbody></table></div>
+    <div class="table-wrap" role="region" aria-label="Empleados" tabindex="0"><table><thead><tr><th scope="col">Empleado</th><th scope="col">Rol</th><th scope="col">Estado</th><th scope="col">Bodega</th></tr></thead><tbody>${employeeRows(employees)}</tbody></table></div>
     ${roleManagement}
   </section>`;
 }
@@ -627,7 +627,7 @@ function renderQuickSales(
       </article>
       <article class="card">
         <h3>Historial de ventas</h3>
-        ${region("sales", "Ventas", `<div class="table-wrap"><table><thead><tr><th>Venta</th><th>Producto</th><th>Cantidad</th><th>Total</th><th>Estado</th></tr></thead><tbody>${quickSaleHistoryRows(salesData.sales)}</tbody></table></div>`)}
+        ${region("sales", "Ventas", `<div class="table-wrap" role="region" aria-label="Historial de ventas" tabindex="0"><table><thead><tr><th scope="col">Venta</th><th scope="col">Producto</th><th scope="col">Cantidad</th><th scope="col">Total</th><th scope="col">Estado</th></tr></thead><tbody>${quickSaleHistoryRows(salesData.sales)}</tbody></table></div>`)}
       </article>
     </div>
     ${renderPostSaleSynchronization(synchronization, capabilities)}
@@ -695,14 +695,14 @@ function renderOltp(
         data.products.length === 0
           ? resourceState.empty(source.receivedAt, source.cycle)
           : source;
-      return `<article class="card"><h3>${label}</h3>${renderResourceSurface({ resource: key, label, state, canRetry: capabilities.includes(readCapabilities[key]), renderContent: () => `<div class="table-wrap"><table><thead><tr>${headers}</tr></thead><tbody>${rows()}</tbody></table></div>` })}</article>`;
+      return `<article class="card"><h3>${label}</h3>${renderResourceSurface({ resource: key, label, state, canRetry: capabilities.includes(readCapabilities[key]), renderContent: () => `<div class="table-wrap" role="region" aria-label="${escapeHtml(label)}" tabindex="0"><table><thead><tr>${headers}</tr></thead><tbody>${rows()}</tbody></table></div>` })}</article>`;
     };
     return `<section id="oltp" class="panel"><h2>Operacion diaria de inventario</h2><div class="content-grid two-columns">
-      ${table("products", "Productos", "<th>Producto</th><th>Categoria</th><th>Stock de producto</th><th>Estado</th>", () => productRows(data.products))}
-      ${table("lots", "Lotes", `<th>Lote</th><th>Vence</th><th>Stock por lote</th><th>Estado</th>${canViewCosts(data.role, capabilities) ? "<th>Costo unitario</th>" : ""}`, () => lotRows(data.lots, data.role, capabilities))}
-      ${table("balances", "Balances", "<th>Lote</th><th>Stock por lote</th>", () => data.balances.map((balance) => `<tr><td>${escapeHtml(balance.lotId)}</td><td>${balance.availableQuantity}</td></tr>`).join(""))}
-      ${table("movements", "Movimientos", "<th>Tipo</th><th>Cantidad</th><th>Delta</th><th>Motivo</th>", () => movementRows(data.movements))}
-      ${table("alerts", "Alertas", "<th>Tipo</th><th>Estado</th><th>Valor</th><th>Umbral</th>", () => alertRows(data.alerts))}
+      ${table("products", "Productos", '<th scope="col">Producto</th><th scope="col">Categoria</th><th scope="col">Stock de producto</th><th scope="col">Estado</th>', () => productRows(data.products))}
+      ${table("lots", "Lotes", `<th scope="col">Lote</th><th scope="col">Vence</th><th scope="col">Stock por lote</th><th scope="col">Estado</th>${canViewCosts(data.role, capabilities) ? '<th scope="col">Costo unitario</th>' : ""}`, () => lotRows(data.lots, data.role, capabilities))}
+      ${table("balances", "Balances", '<th scope="col">Lote</th><th scope="col">Stock por lote</th>', () => data.balances.map((balance) => `<tr><td>${escapeHtml(balance.lotId)}</td><td>${balance.availableQuantity}</td></tr>`).join(""))}
+      ${table("movements", "Movimientos", '<th scope="col">Tipo</th><th scope="col">Cantidad</th><th scope="col">Delta</th><th scope="col">Motivo</th>', () => movementRows(data.movements))}
+      ${table("alerts", "Alertas", '<th scope="col">Tipo</th><th scope="col">Estado</th><th scope="col">Valor</th><th scope="col">Umbral</th>', () => alertRows(data.alerts))}
       <article class="card"><h3>Sugerencia FEFO</h3><p>Selecciona un producto para consultar el lote que vence primero.</p></article>
     </div></section>`;
   }
@@ -716,7 +716,7 @@ function renderOltp(
     data.products.map((product) => product.category?.name ?? "Sin categoria"),
   );
   const costHeader = canViewCosts(data.role, capabilities)
-    ? "<th>Costo unitario</th>"
+    ? '<th scope="col">Costo unitario</th>'
     : "";
   return `<section id="oltp" class="panel" aria-labelledby="oltp-title">
     <div class="section-heading"><span class="eyebrow">Operacion OLTP</span><h2 id="oltp-title">Operacion diaria de inventario</h2><p>OLTP registra las operaciones diarias de la bodega.</p></div>
@@ -730,10 +730,10 @@ function renderOltp(
       <span>FEFO activo</span>
     </div>
     <div class="content-grid two-columns">
-      <article class="card"><h3>Productos</h3><div class="table-wrap"><table><thead><tr><th>Producto</th><th>Categoria</th><th>Stock de producto</th><th>Estado</th></tr></thead><tbody>${productRows(data.products)}</tbody></table></div></article>
-      <article class="card"><h3>Lotes y vencimientos</h3><div class="table-wrap"><table><thead><tr><th>Lote</th><th>Vence</th><th>Stock por lote</th><th>Estado</th>${costHeader}</tr></thead><tbody>${lotRows(data.lots, data.role, capabilities)}</tbody></table></div></article>
-      <article class="card"><h3>Movimientos / Kardex</h3><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Cantidad</th><th>Delta</th><th>Motivo</th></tr></thead><tbody>${movementRows(data.movements)}</tbody></table></div></article>
-      <article class="card"><h3>Alertas y FEFO</h3><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Estado</th><th>Valor</th><th>Umbral</th></tr></thead><tbody>${alertRows(data.alerts)}</tbody></table></div><div class="fefo-box"><span>Sugerencia FEFO</span><strong>${data.fefo.items[0]?.suggestedQuantity ?? 0} unidades</strong><small>Lote ${escapeHtml(data.fefo.items[0]?.lotId.slice(-6) ?? "N/D")} vence ${escapeHtml(data.fefo.items[0]?.expiresAt ?? "N/D")}</small></div></article>
+      <article class="card"><h3>Productos</h3><div class="table-wrap" role="region" aria-label="Productos" tabindex="0"><table><thead><tr><th scope="col">Producto</th><th scope="col">Categoria</th><th scope="col">Stock de producto</th><th scope="col">Estado</th></tr></thead><tbody>${productRows(data.products)}</tbody></table></div></article>
+      <article class="card"><h3>Lotes y vencimientos</h3><div class="table-wrap" role="region" aria-label="Lotes y vencimientos" tabindex="0"><table><thead><tr><th scope="col">Lote</th><th scope="col">Vence</th><th scope="col">Stock por lote</th><th scope="col">Estado</th>${costHeader}</tr></thead><tbody>${lotRows(data.lots, data.role, capabilities)}</tbody></table></div></article>
+      <article class="card"><h3>Movimientos / Kardex</h3><div class="table-wrap" role="region" aria-label="Movimientos / Kardex" tabindex="0"><table><thead><tr><th scope="col">Tipo</th><th scope="col">Cantidad</th><th scope="col">Delta</th><th scope="col">Motivo</th></tr></thead><tbody>${movementRows(data.movements)}</tbody></table></div></article>
+      <article class="card"><h3>Alertas y FEFO</h3><div class="table-wrap" role="region" aria-label="Alertas y FEFO" tabindex="0"><table><thead><tr><th scope="col">Tipo</th><th scope="col">Estado</th><th scope="col">Valor</th><th scope="col">Umbral</th></tr></thead><tbody>${alertRows(data.alerts)}</tbody></table></div><div class="fefo-box"><span>Sugerencia FEFO</span><strong>${data.fefo.items[0]?.suggestedQuantity ?? 0} unidades</strong><small>Lote ${escapeHtml(data.fefo.items[0]?.lotId.slice(-6) ?? "N/D")} vence ${escapeHtml(data.fefo.items[0]?.expiresAt ?? "N/D")}</small></div></article>
     </div>
   </section>`;
 }
@@ -812,7 +812,7 @@ function renderBi(
     })
     .join("");
   const lossHeader = canViewCosts(data.role, capabilities)
-    ? "<th>Perdida estimada</th>"
+    ? '<th scope="col">Perdida estimada</th>'
     : "";
   return `<section id="bi" class="panel" aria-labelledby="bi-title">
     <div class="section-heading"><span class="eyebrow">BI/OLAP</span><h2 id="bi-title">Dashboard analitico de inventario</h2><p>OLAP permite analizar datos agregados para tomar decisiones.</p></div>
@@ -827,7 +827,7 @@ function renderBi(
     <div class="content-grid two-columns">
       <article class="card"><h3>Stock por categoria</h3>${data.bi.stockByCategory.map((row) => progressBar(row.categoryName, row.stockAvailable, maxStock)).join("")}</article>
       <article class="card"><h3>Movimientos por tipo</h3>${data.bi.movementSummary.map((row) => progressBar(row.type, row.quantity, maxMovement)).join("")}</article>
-      <article class="card"><h3>Riesgo de vencimiento</h3><div class="table-wrap"><table><thead><tr><th>Producto</th><th>Vence</th><th>Stock por lote</th><th>Estado</th>${lossHeader}</tr></thead><tbody>${riskRows}</tbody></table></div></article>
+      <article class="card"><h3>Riesgo de vencimiento</h3><div class="table-wrap" role="region" aria-label="Riesgo de vencimiento" tabindex="0"><table><thead><tr><th scope="col">Producto</th><th scope="col">Vence</th><th scope="col">Stock por lote</th><th scope="col">Estado</th>${lossHeader}</tr></thead><tbody>${riskRows}</tbody></table></div></article>
       <article class="card"><h3>Alertas por tipo y estado</h3>${data.bi.alertsSummary.map((row) => `<div class="alert-summary"><span>${badge(row.type)} ${badge(row.status)}</span><strong>${row.alertCount}</strong></div>`).join("")}</article>
     </div>
   </section>`;

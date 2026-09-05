@@ -138,11 +138,11 @@ existe y permite recuperarse sin perder datos seguros ni repetir una venta confi
 
 **Propósito**: completar los tres flujos principales desde 320 px y por teclado sin rediseño integral.
 
-- [ ] T055 [P] [HU-004] Completar primero la matriz Playwright de viewports 320/768/1440 para login, consulta de stock y venta rápida, con aserciones de overflow y acciones alcanzables — FR-018, FR-019, FR-022, NFR-003, SC-007 — `apps/web/e2e/web-stabilization-responsive-accessibility.spec.ts`
-- [ ] T056 [P] [HU-004] Añadir pruebas de teclado, orden de foco, `aria-current`, nombres accesibles, landmarks y anuncios de carga/éxito/error — FR-017, FR-020, FR-022, NFR-002, SC-008 — `apps/web/test/web-stabilization-accessibility.spec.ts`
-- [ ] T057 [HU-004] Ajustar navegación, grillas, formularios, controles táctiles y breakpoints para evitar overflow/superposición entre 320 y 1440 px — FR-017, FR-018, NFR-003, SC-007 — `apps/web/demo/index.html`
-- [ ] T058 [HU-004] Contener tablas anchas dentro de regiones con nombre accesible y encabezados asociables, adaptando la presentación móvil sin mezclar etiquetas y valores — FR-019, FR-020, NFR-002, NFR-003, SC-007, SC-008 — `apps/web/demo/index.html`, `apps/web/src/demo/mvp-demo.ts`, `apps/web/src/features/inventory-dashboard.ts`
-- [ ] T059 [HU-004] Añadir foco `:focus-visible`, contraste AA, áreas táctiles, `aria-live`/roles y respeto por movimiento reducido; hacer pasar T055/T056 — FR-020, NFR-002, NFR-003, SC-007, SC-008 — `apps/web/demo/index.html`, `apps/web/src/demo/mvp-demo.ts`, `apps/web/src/features/dashboard/surface-state-view.ts`
+- [x] T055 [P] [HU-004] Completar primero la matriz Playwright de viewports 320/768/1440 para login, consulta de stock y venta rápida, con aserciones de overflow y acciones alcanzables — FR-018, FR-019, FR-022, NFR-003, SC-007 — `apps/web/e2e/web-stabilization-responsive-accessibility.spec.ts`
+- [x] T056 [P] [HU-004] Añadir pruebas de teclado, orden de foco, `aria-current`, nombres accesibles, landmarks y anuncios de carga/éxito/error — FR-017, FR-020, FR-022, NFR-002, SC-008 — `apps/web/test/web-stabilization-accessibility.spec.ts`
+- [x] T057 [HU-004] Ajustar navegación, grillas, formularios, controles táctiles y breakpoints para evitar overflow/superposición entre 320 y 1440 px — FR-017, FR-018, NFR-003, SC-007 — `apps/web/demo/index.html`
+- [x] T058 [HU-004] Contener tablas anchas dentro de regiones con nombre accesible y encabezados asociables, adaptando la presentación móvil sin mezclar etiquetas y valores — FR-019, FR-020, NFR-002, NFR-003, SC-007, SC-008 — `apps/web/demo/index.html`, `apps/web/src/demo/mvp-demo.ts`, `apps/web/src/features/inventory-dashboard.ts`
+- [x] T059 [HU-004] Añadir foco `:focus-visible`, contraste AA, áreas táctiles, `aria-live`/roles y respeto por movimiento reducido; hacer pasar T055/T056 — FR-020, NFR-002, NFR-003, SC-007, SC-008 — `apps/web/demo/index.html`, `apps/web/src/demo/mvp-demo.ts`, `apps/web/src/features/dashboard/surface-state-view.ts`
 
 **Independent Test HU-004**: login, stock y venta se completan en 320/768/1440 px y solo con teclado,
 sin overflow de página, superposición, pérdida de acciones ni mensajes imperceptibles.

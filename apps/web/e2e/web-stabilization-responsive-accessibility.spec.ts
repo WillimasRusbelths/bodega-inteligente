@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Locator } from "@playwright/test";
 
 const baseUrl = "http://127.0.0.1:5173";
 const viewports = [
@@ -56,7 +56,8 @@ async function mockLocalDemoApi(page: Page): Promise<() => number> {
       return;
     }
     if (pathname === "/tenants/current/products") {
-      await route.fulfill({ json: { data: products } });
+      // Current dual projection consumed by the real browser (no UI substitution).
+      await route.fulfill({ json: { items: products, data: products } });
       return;
     }
     if (pathname === "/tenants/current/sales" && request.method() === "GET") {
@@ -103,7 +104,152 @@ async function mockLocalDemoApi(page: Page): Promise<() => number> {
   return () => salesPosted;
 }
 
+async function tabTo(page: Page, target: Locator): Promise<void> {
+  for (let count = 0; count < 70; count += 1) {
+    if (
+      await target.evaluate((element) => element === document.activeElement)
+    ) {
+      await expect(target).toBeInViewport();
+      return;
+    }
+    await page.keyboard.press("Tab");
+  }
+  await expect(target).toBeFocused();
+}
+
+async function assertLayout(page: Page): Promise<void> {
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(page.viewportSize()!.width);
+  const clipped = await page
+    .locator("input:not([type=radio]), select, button, .sidebar a")
+    .evaluateAll((elements) =>
+      elements
+        .filter((element) => {
+          const rect = element.getBoundingClientRect();
+          return (
+            rect.width > 0 && (rect.left < -1 || rect.right > innerWidth + 1)
+          );
+        })
+        .map((element) => element.id || element.textContent),
+    );
+  expect(clipped).toEqual([]);
+  const overlap = await page.locator(".sidebar a").evaluateAll((elements) =>
+    elements.some((element, index) =>
+      elements.slice(index + 1).some((other) => {
+        const a = element.getBoundingClientRect();
+        const b = other.getBoundingClientRect();
+        return (
+          Math.min(a.right, b.right) > Math.max(a.left, b.left) + 1 &&
+          Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top) + 1
+        );
+      }),
+    ),
+  );
+  expect(overlap).toBe(false);
+  const formOverlap = await page.locator("form").evaluateAll((forms) =>
+    forms.some((form) => {
+      const controls = Array.from(
+        form.querySelectorAll("input:not([type=radio]), select, button"),
+      );
+      return controls.some((control, index) =>
+        controls.slice(index + 1).some((other) => {
+          const a = control.getBoundingClientRect();
+          const b = other.getBoundingClientRect();
+          return (
+            Math.min(a.right, b.right) > Math.max(a.left, b.left) + 1 &&
+            Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top) + 1
+          );
+        }),
+      );
+    }),
+  );
+  expect(formOverlap).toBe(false);
+}
+
 for (const viewport of viewports) {
+  test(`keyboard, regional scrolling and recoverable errors at ${viewport.name}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await mockLocalDemoApi(page);
+    await page.route(
+      "http://127.0.0.1:3000/tenants/current/settings",
+      (route) =>
+        route.fulfill({
+          status: 409,
+          json: {
+            error: {
+              code: "CONFLICT",
+              correlationId: "correlation-" + "x".repeat(90),
+              message: "private SQL",
+            },
+          },
+        }),
+    );
+    await page.goto(baseUrl);
+    await expect(page.getByTestId("demo-login")).toBeVisible();
+    await assertLayout(page);
+    await tabTo(
+      page,
+      page.getByRole("textbox", { name: "Usuario demo", exact: true }),
+    );
+    await page.keyboard.press("Tab");
+    await expect(page.getByLabel("PIN demo")).toBeFocused();
+    await page.keyboard.press("Tab");
+    const login = page.getByRole("button", { name: "Iniciar sesión" });
+    await expect(login).toBeFocused();
+    expect(
+      await login.evaluate((element) =>
+        parseFloat(getComputedStyle(element).outlineWidth),
+      ),
+    ).toBeGreaterThanOrEqual(2);
+    await page.keyboard.press("Enter");
+    await expect(
+      page.getByLabel("Stock de producto", { exact: true }),
+    ).toHaveValue("18");
+    await assertLayout(page);
+    const inventory = page.locator('.sidebar a[href="#oltp"]');
+    await tabTo(page, inventory);
+    await page.keyboard.press("Enter");
+    await expect(inventory).toHaveAttribute("aria-current", "page");
+    const table = page.getByRole("region", { name: "Productos", exact: true });
+    await expect(table).toBeVisible();
+    await tabTo(page, table);
+    await expect(table).toBeFocused();
+    const scrollable = await table.evaluate(
+      (element) => element.scrollWidth > element.clientWidth,
+    );
+    if (scrollable) {
+      await page.keyboard.press("ArrowRight");
+      await expect
+        .poll(() => table.evaluate((element) => element.scrollLeft))
+        .toBeGreaterThan(0);
+    }
+    await assertLayout(page);
+    const settings = page.locator('.sidebar a[href="#configuracion"]');
+    await tabTo(page, settings);
+    await page.keyboard.press("Enter");
+    await tabTo(page, page.getByLabel("Nombre de bodega"));
+    await page
+      .getByLabel("Nombre de bodega")
+      .fill("Bodega " + "nombre-largo".repeat(10));
+    await tabTo(
+      page,
+      page.getByRole("button", { name: "Guardar configuración" }),
+    );
+    await page.keyboard.press("Enter");
+    const error = page.locator("#settings-result");
+    await expect(error).toBeFocused();
+    await expect(error).toHaveAttribute("role", "alert");
+    await expect(error).toContainText("correlation-");
+    await expect(error).not.toContainText("SQL");
+    await expect(page.getByLabel("Nombre de bodega")).toHaveValue(
+      "Bodega " + "nombre-largo".repeat(10),
+    );
+    await assertLayout(page);
+  });
+
   test(`keeps login, stock and quick sale usable at ${viewport.name}px`, async ({
     page,
   }) => {
@@ -113,21 +259,64 @@ for (const viewport of viewports) {
     await expect(page.getByTestId("demo-login")).toBeVisible();
     await page.getByRole("button", { name: "Iniciar sesión" }).click();
     await expect(page.getByTestId("demo-dashboard")).toBeVisible();
-    await expect(page.getByLabel("Stock disponible")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Registrar venta" })).toBeVisible();
+    await expect(
+      page.getByLabel("Stock de producto", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByLabel("Stock de producto", { exact: true }),
+    ).toHaveValue("18");
+    await expect(
+      page.getByRole("button", { name: "Registrar venta" }),
+    ).toBeVisible();
 
     await page.getByLabel("Cantidad").fill("1");
+    await tabTo(page, page.getByRole("button", { name: "Registrar venta" }));
     await page.getByRole("button", { name: "Registrar venta" }).focus();
-    await expect(page.getByRole("button", { name: "Registrar venta" })).toBeFocused();
+    await expect(
+      page.getByRole("button", { name: "Registrar venta" }),
+    ).toBeFocused();
     await page.keyboard.press("Enter");
     await expect.poll(salesPosted).toBe(1);
     await expect(page.locator("#ventas")).toContainText("V-LOCAL-001");
+    await expect(page.locator(".sale-synchronization")).toHaveAttribute(
+      "role",
+      "status",
+    );
+    await assertLayout(page);
+    await page.screenshot({
+      path: test.info().outputPath(`dashboard-${viewport.name}.png`),
+      fullPage: true,
+    });
+
+    console.log(
+      JSON.stringify(
+        await page.evaluate(() => ({
+          viewport: innerWidth,
+          pageWidth: document.documentElement.scrollWidth,
+          current: document
+            .querySelector('.sidebar a[aria-current="page"]')
+            ?.getAttribute("href"),
+          overflow: Array.from(document.querySelectorAll("body *"))
+            .filter((element) => {
+              const rect = element.getBoundingClientRect();
+              return (
+                rect.right > innerWidth + 1 && !element.closest(".table-wrap")
+              );
+            })
+            .slice(0, 12)
+            .map((element) => ({
+              tag: element.tagName,
+              class: element.className,
+            })),
+        })),
+      ),
+    );
 
     await expect
       .poll(() =>
-        page.locator("html").evaluate((element) =>
-          element.scrollWidth <= element.clientWidth,
-        ),
+        page
+          .locator("html")
+          .evaluate((element) => element.scrollWidth <= element.clientWidth),
       )
       .toBe(true);
     await expect(page.locator(".sidebar a").first()).toHaveAttribute(
